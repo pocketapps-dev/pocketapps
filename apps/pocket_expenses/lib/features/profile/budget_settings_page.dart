@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../config/currency_provider.dart';
 import '../../core/providers/profile_provider.dart';
 
 class BudgetSettingsPage extends ConsumerStatefulWidget {
@@ -70,10 +71,11 @@ class _BudgetSettingsPageState extends ConsumerState<BudgetSettingsPage> {
             TextField(
               controller: _budgetController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Orçamento mensal',
-                prefixIcon: Icon(Icons.account_balance_wallet),
-                prefixText: '€ ',
+                prefixIcon: const Icon(Icons.account_balance_wallet),
+                prefixText:
+                    '${currencyByCode(ref.watch(currencyProvider)).symbol} ',
               ),
             ),
             const SizedBox(height: 8),

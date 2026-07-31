@@ -40,18 +40,8 @@ class ProfileActions {
     }
   }
 
-  Future<void> updateCurrency(String currency) async {
-    await _service.updateSettings(currency: currency);
-    _ref.invalidate(settingsProvider);
-  }
-
   Future<void> updateBudget(double? budget) async {
     await _service.updateSettings(monthlyBudget: budget);
-    _ref.invalidate(settingsProvider);
-  }
-
-  Future<void> updateNotifications(bool enabled) async {
-    await _service.updateSettings(notificationsEnabled: enabled);
     _ref.invalidate(settingsProvider);
   }
 }

@@ -6,6 +6,7 @@ import 'package:pocketapps_auth/pocketapps_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'config/app_config.dart';
+import 'config/currency_provider.dart';
 import 'config/theme.dart';
 import 'config/theme_provider.dart';
 import 'config/router.dart';
@@ -18,6 +19,7 @@ void main() async {
 
   final prefs = await SharedPreferences.getInstance();
   final darkMode = prefs.getBool(darkModePrefKey) ?? false;
+  final currency = prefs.getString(currencyPrefKey) ?? 'EUR';
 
   runApp(
     ProviderScope(
@@ -26,6 +28,9 @@ void main() async {
           () => ThemeModeNotifier(
             initial: darkMode ? ThemeMode.dark : ThemeMode.light,
           ),
+        ),
+        currencyProvider.overrideWith(
+          () => CurrencyNotifier(initial: currency),
         ),
       ],
       child: const PocketExpensesApp(),

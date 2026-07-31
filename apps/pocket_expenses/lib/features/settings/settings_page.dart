@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pocketapps_auth/pocketapps_auth.dart';
 
-import '../../config/theme_provider.dart';
 import '../../core/providers/profile_provider.dart';
 import '../categories/categories_page.dart';
 import '../profile/profile_page.dart';
+import 'account_page.dart';
+import 'preferences_page.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -15,10 +16,8 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final supabase = PocketAuth.client;
     final user = supabase.auth.currentUser;
-    final themeMode = ref.watch(themeModeProvider);
     final profile = ref.watch(profileProvider);
 
-    final isDark = themeMode == ThemeMode.dark;
     final username = profile.value?['username'] ?? '';
 
     return Scaffold(
@@ -76,7 +75,7 @@ class SettingsPage extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.person_outline),
                   title: const Text('Perfil'),
-                  subtitle: const Text('Username, moeda, orcamento'),
+                  subtitle: const Text('Nome de utilizador'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.of(context).push(
@@ -95,22 +94,14 @@ class SettingsPage extends ConsumerWidget {
           Card(
             child: Column(
               children: [
-                SwitchListTile(
-                  secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
-                  title: Text(isDark ? 'Tema Escuro' : 'Tema Claro'),
-                  subtitle: const Text('Persistente neste dispositivo'),
-                  value: isDark,
-                  onChanged: (_) => ref.read(themeModeProvider.notifier).toggle(),
-                ),
-                const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.language),
-                  title: const Text('Idioma'),
-                  subtitle: const Text('Português (em breve)'),
+                  leading: const Icon(Icons.settings_outlined),
+                  title: const Text('Preferências'),
+                  subtitle: const Text('Tema, idioma, moeda'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Traduções em breve')),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PreferencesPage()),
                     );
                   },
                 ),
@@ -126,19 +117,25 @@ class SettingsPage extends ConsumerWidget {
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.lock_outlined),
-                  title: const Text('Alterar Palavra-passe'),
+                  leading: const Icon(Icons.account_circle_outlined),
+                  title: const Text('Conta'),
+                  subtitle: const Text('Email, palavra-passe, premium'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/profile/change-password'),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AccountPage()),
+                    );
+                  },
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.red),
-                  title: const Text('Eliminar Conta', style: TextStyle(color: Colors.red)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/profile/delete-account'),
-                ),
-                const Divider(height: 1),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Terminar sessao no fundo
+          Card(
+            child: Column(
+              children: [
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red),
                   title: const Text('Terminar Sessao', style: TextStyle(color: Colors.red)),

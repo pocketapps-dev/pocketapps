@@ -32,7 +32,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     final username = _usernameController.text.trim();
     if (username.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Username não pode estar vazio')),
+        const SnackBar(content: Text('O nome de utilizador não pode estar vazio')),
       );
       setState(() => _isLoading = false);
       return;
@@ -42,12 +42,12 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     if (mounted) {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Username atualizado!'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Nome de utilizador atualizado!'), backgroundColor: Colors.green),
         );
         Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Username já está em uso'), backgroundColor: Colors.red),
+          const SnackBar(content: Text('Nome de utilizador já está em uso'), backgroundColor: Colors.red),
         );
       }
     }
@@ -65,7 +65,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             TextField(
               controller: _usernameController,
               decoration: const InputDecoration(
-                labelText: 'Username',
+                labelText: 'Nome de utilizador',
                 prefixIcon: Icon(Icons.alternate_email),
               ),
             ),

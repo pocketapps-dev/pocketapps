@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../config/currency_provider.dart';
 import '../../core/models/category.dart';
 import '../../core/models/expense.dart';
 import '../../core/models/monthly_status.dart';
@@ -252,7 +252,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '${total.toStringAsFixed(0)}\u20AC',
+                        '${total.toStringAsFixed(0)}${currencyByCode(ref.watch(currencyProvider)).symbol}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 9,
@@ -349,10 +349,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 final color = de.isSkipped
                     ? Colors.grey
                     : (de.isPaid ? Colors.green : Colors.orange);
-                final currencyFormat = NumberFormat.currency(
-                  locale: 'pt_PT',
-                  symbol: '\u20AC',
-                );
+                final currencyFormat = currencyFormatFor(ref.watch(currencyProvider));
 
                 return Card(
                   child: ListTile(

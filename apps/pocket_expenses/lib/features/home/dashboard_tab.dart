@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../config/currency_provider.dart';
 import '../../core/models/category.dart';
 import '../../core/models/expense.dart';
 import '../../core/models/monthly_status.dart';
@@ -87,10 +88,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     final expensesAsync = ref.watch(expensesProvider(true));
     final statusesAsync = ref.watch(monthlyStatusesProvider(_selectedMonth));
     final categoriesAsync = ref.watch(categoriesProvider('expenses'));
-    final currencyFormat = NumberFormat.currency(
-      locale: 'pt_PT',
-      symbol: '\u20AC',
-    );
+    final currencyFormat = currencyFormatFor(ref.watch(currencyProvider));
 
     return SafeArea(
       child: expensesAsync.when(

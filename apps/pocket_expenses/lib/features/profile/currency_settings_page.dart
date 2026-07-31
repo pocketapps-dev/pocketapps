@@ -1,28 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/providers/profile_provider.dart';
-
-const currencies = [
-  ('EUR', '€', 'Euro'),
-  ('USD', '\$', 'Dólar Americano'),
-  ('GBP', '£', 'Libra Esterlina'),
-  ('BRL', 'R\$', 'Real Brasileiro'),
-  ('JPY', '¥', 'Iene Japonês'),
-  ('CHF', 'CHF', 'Franco Suíço'),
-  ('CAD', 'CA\$', 'Dólar Canadense'),
-  ('AUD', 'A\$', 'Dólar Australiano'),
-  ('PLN', 'zł', 'Zloty Polaco'),
-  ('CZK', 'Kč', 'Coroa Checa'),
-];
+import '../../config/currency_provider.dart';
 
 class CurrencySettingsPage extends ConsumerWidget {
   const CurrencySettingsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsProvider);
-    final current = settings.value?['currency'] ?? 'EUR';
+    final current = ref.watch(currencyProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Moeda')),
@@ -30,18 +16,30 @@ class CurrencySettingsPage extends ConsumerWidget {
         groupValue: current,
         onChanged: (value) {
           if (value != null) {
-            ref.read(profileActionsProvider).updateCurrency(value);
+            ref.read(currencyProvider.notifier).setCurrency(value);
           }
         },
         child: ListView.separated(
           itemCount: currencies.length,
           separatorBuilder: (_, _) => const Divider(height: 1),
           itemBuilder: (context, index) {
-            final (code, symbol, name) = currencies[index];
+            final currency = currencies[index];
             return RadioListTile<String>(
-              title: Text('$code ($symbol)'),
-              subtitle: Text(name),
-              value: code,
+              secondary: CircleAvatar(
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.primaryContainer,
+                child: Text(
+                  currency.symbol,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+              title: Text('${currency.name} (${currency.code})'),
+              value: currency.code,
             );
           },
         ),

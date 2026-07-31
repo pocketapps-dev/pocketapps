@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../config/currency_provider.dart';
 import '../../core/models/expense.dart';
 import '../../core/models/monthly_status.dart';
 import '../../core/providers/category_provider.dart';
@@ -72,7 +73,7 @@ class SummaryPage extends ConsumerWidget {
     List categories,
     DateTime month,
   ) {
-    final currencyFormat = NumberFormat.currency(locale: 'pt_PT', symbol: '€');
+    final currencyFormat = currencyFormatFor(ref.watch(currencyProvider));
 
     double total = 0;
     double paid = 0;

@@ -91,11 +91,10 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
             TextField(
               controller: _confirmController,
               decoration: const InputDecoration(
-                hintText: 'ELIMINAR',
                 prefixIcon: Icon(Icons.warning_amber, color: Colors.red),
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

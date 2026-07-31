@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../config/currency_provider.dart';
 import '../../core/models/expense.dart';
 import '../../core/providers/category_provider.dart';
 import '../../core/providers/expense_provider.dart';
-import '../../core/providers/profile_provider.dart';
 
 class ExpenseFormPage extends ConsumerStatefulWidget {
   final Expense? expense;
@@ -151,10 +151,8 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider('expenses'));
-    final currencySymbols = {'EUR': '€', 'USD': '\$', 'GBP': '£', 'BRL': 'R\$'};
-    final settings = ref.watch(settingsProvider);
-    final currency = settings.value?['currency'] ?? 'EUR';
-    final symbol = currencySymbols[currency] ?? currency;
+    final currency = ref.watch(currencyProvider);
+    final symbol = currencyByCode(currency).symbol;
 
     return Scaffold(
       appBar: AppBar(

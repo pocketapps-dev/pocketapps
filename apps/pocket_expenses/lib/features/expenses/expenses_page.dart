@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../config/currency_provider.dart';
 import '../../core/models/category.dart';
 import '../../core/models/expense.dart';
 import '../../core/models/monthly_status.dart';
@@ -56,11 +57,19 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           categoriesAsync.when(
             loading: () => const SizedBox.shrink(),
             error: (_, _) => const SizedBox.shrink(),
-            data: (categories) => _CategoryFilter(
-              categories: categories,
-              selectedId: _selectedCategoryId,
-              onChanged: (id) => setState(() => _selectedCategoryId = id),
-            ),
+            data: (categories) {
+              final counts = <String, int>{};
+              for (final e in expensesAsync.value ?? []) {
+                final id = e.categoryId;
+                counts[id] = (counts[id] ?? 0) + 1;
+              }
+              return _CategoryFilter(
+                categories: categories,
+                counts: counts,
+                selectedId: _selectedCategoryId,
+                onChanged: (id) => setState(() => _selectedCategoryId = id),
+              );
+            },
           ),
           Expanded(
             child: expensesAsync.when(
@@ -220,11 +229,13 @@ class _MonthSelector extends StatelessWidget {
 
 class _CategoryFilter extends StatelessWidget {
   final List<Category> categories;
+  final Map<String, int> counts;
   final String? selectedId;
   final ValueChanged<String?> onChanged;
 
   const _CategoryFilter({
     required this.categories,
+    required this.counts,
     required this.selectedId,
     required this.onChanged,
   });
@@ -258,7 +269,9 @@ class _CategoryFilter extends StatelessWidget {
                   size: 16,
                   color: color,
                 ),
-                label: Text(cat.name),
+                label: Text(
+                  '${cat.name} (${counts[cat.id] ?? 0})',
+                ),
                 selected: selectedId == cat.id,
                 onSelected: (_) =>
                     onChanged(selectedId == cat.id ? null : cat.id),
@@ -309,6 +322,9 @@ class _ExpensesList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currencyCode = ref.watch(currencyProvider);
+    final currencyFormat = currencyFormatFor(currencyCode);
+
     if (expenses.isEmpty) {
       return const Center(
         child: Column(
@@ -332,7 +348,12 @@ class _ExpensesList extends ConsumerWidget {
 
     return Column(
       children: [
-        _SummaryCard(total: total, paid: paid, unpaid: total - paid),
+        _SummaryCard(
+          total: total,
+          paid: paid,
+          unpaid: total - paid,
+          currencyFormat: currencyFormat,
+        ),
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.only(bottom: 80),
@@ -343,6 +364,7 @@ class _ExpensesList extends ConsumerWidget {
               return _ExpenseTile(
                 expense: expense,
                 status: status,
+                currencyFormat: currencyFormat,
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -377,20 +399,17 @@ class _SummaryCard extends StatelessWidget {
   final double total;
   final double paid;
   final double unpaid;
+  final NumberFormat currencyFormat;
 
   const _SummaryCard({
     required this.total,
     required this.paid,
     required this.unpaid,
+    required this.currencyFormat,
   });
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(
-      locale: 'pt_PT',
-      symbol: '\u20AC',
-    );
-
     return Card(
       margin: const EdgeInsets.all(16),
       child: Padding(
@@ -457,6 +476,7 @@ class _SummaryItem extends StatelessWidget {
 class _ExpenseTile extends StatelessWidget {
   final Expense expense;
   final MonthlyStatus? status;
+  final NumberFormat currencyFormat;
   final VoidCallback onTap;
   final VoidCallback onTogglePaid;
   final VoidCallback onToggleSkip;
@@ -464,6 +484,7 @@ class _ExpenseTile extends StatelessWidget {
   const _ExpenseTile({
     required this.expense,
     required this.status,
+    required this.currencyFormat,
     required this.onTap,
     required this.onTogglePaid,
     required this.onToggleSkip,
@@ -471,10 +492,6 @@ class _ExpenseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(
-      locale: 'pt_PT',
-      symbol: '\u20AC',
-    );
     final isPaid = status?.isPaid == true;
     final isSkipped = status?.isSkipped == true;
     final color = expense.categoryColor != null
@@ -515,7 +532,9 @@ class _ExpenseTile extends StatelessWidget {
               currencyFormat.format(expense.amount),
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: isPaid ? Colors.green : Colors.black87,
+                color: isPaid
+                    ? Colors.green
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(width: 8),

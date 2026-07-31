@@ -33,23 +33,18 @@ class ProfileService {
     if (response == null) {
       await _client.from('user_settings').insert({
         'user_id': _userId,
-        'currency': 'EUR',
-        'notifications_enabled': true,
+        'app_name': 'expenses',
       });
-      return {'currency': 'EUR', 'monthly_budget': null, 'notifications_enabled': true};
+      return {'monthly_budget': null};
     }
     return response;
   }
 
   Future<void> updateSettings({
-    String? currency,
     double? monthlyBudget,
-    bool? notificationsEnabled,
   }) async {
     final updates = <String, dynamic>{};
-    if (currency != null) updates['currency'] = currency;
     if (monthlyBudget != null) updates['monthly_budget'] = monthlyBudget;
-    if (notificationsEnabled != null) updates['notifications_enabled'] = notificationsEnabled;
 
     if (updates.isNotEmpty) {
       await _client
