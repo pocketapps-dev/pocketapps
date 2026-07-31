@@ -128,15 +128,12 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
           }
           return ReorderableListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 8),
+            buildDefaultDragHandles: false,
             itemCount: categories.length,
-            onReorderItem: (Object oldItem, Object newItem) {
-              final oldIndex = categories.indexOf(oldItem as Category);
-              final rawNewIndex = categories.indexOf(newItem as Category);
-              if (oldIndex == -1 || rawNewIndex == -1) return;
+            onReorderItem: (oldIndex, newIndex) {
               final ids = categories.map((c) => c.id).toList();
               final id = ids.removeAt(oldIndex);
-              final adjusted = rawNewIndex > oldIndex ? rawNewIndex - 1 : rawNewIndex;
-              ids.insert(adjusted, id);
+              ids.insert(newIndex, id);
               ref.read(categoryActionsProvider).reorder(ids);
             },
             itemBuilder: (context, index) {
@@ -167,7 +164,11 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
                         onPressed: () =>
                             _confirmDelete(context, ref, cat.id, cat.name),
                       ),
-                    if (!isUncategorized) const Icon(Icons.drag_handle),
+                    if (!isUncategorized)
+                      ReorderableDragStartListener(
+                        index: index,
+                        child: const Icon(Icons.drag_handle),
+                      ),
                   ],
                 ),
                 onTap: isUncategorized ? null : () => _showCategoryDialog(context, ref, category: cat),
