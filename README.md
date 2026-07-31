@@ -63,6 +63,12 @@ Each app requires a Supabase project and a Google OAuth client — see the app R
 
 ## CI
 
-`.github/workflows/build.yml` builds the PocketExpenses release APK on every push to `main`.
+Each app has its own workflow, badge and APK artifact:
 
-[![Build PocketExpenses APK](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build.yml/badge.svg)](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build.yml)
+| App | Workflow | Status |
+| --- | --- | --- |
+| PocketExpenses | [`build-expenses.yml`](.github/workflows/build-expenses.yml) | [![Build PocketExpenses APK](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build-expenses.yml/badge.svg)](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build-expenses.yml) |
+| PocketFuel | [`build-fuel.yml`](.github/workflows/build-fuel.yml) | [![Build PocketFuel APK](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build-fuel.yml/badge.svg)](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build-fuel.yml) |
+| PocketShopping | [`build-shopping.yml`](.github/workflows/build-shopping.yml) | [![Build PocketShopping APK](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build-shopping.yml/badge.svg)](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build-shopping.yml) |
+
+PocketExpenses builds on every push to `main`; PocketFuel and PocketShopping build on demand (`workflow_dispatch`).

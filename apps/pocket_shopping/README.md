@@ -20,3 +20,5 @@ flutter run
 ```
 
 The app's branding and Supabase configuration live in `lib/config/app_config.dart`.
+
+[![Build PocketShopping APK](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build-shopping.yml/badge.svg)](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build-shopping.yml)
