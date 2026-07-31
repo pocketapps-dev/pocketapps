@@ -1,0 +1,24 @@
+name: pocket_fuel
+description: "PocketFuel - fuel and vehicle expense tracker."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  pocketapps_auth:
+    path: ../../packages/pocketapps_auth
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

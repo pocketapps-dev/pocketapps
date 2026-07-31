@@ -1,0 +1,35 @@
+# ============================================================
+# PocketApps monorepo root .gitignore
+# Each Flutter project also carries its own .gitignore.
+# ============================================================
+
+# Flutter / Dart artifacts
+.dart_tool/
+.build/
+build/
+.flutter-plugins-dependencies
+.metadata
+*.iml
+.idea/
+coverage/
+
+# Supabase local CLI state
+supabase/.temp/
+
+# Android signing secrets
+**/android/key.properties
+**/android/app/release.keystore
+*.keystore
+*.jks
+
+# Environment / secrets
+.env
+.env.*
+
+# Logs / OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
