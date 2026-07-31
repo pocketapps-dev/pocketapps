@@ -5,7 +5,6 @@ import 'package:pocketapps_auth/pocketapps_auth.dart';
 
 import '../../config/theme_provider.dart';
 import '../../core/providers/profile_provider.dart';
-import '../../core/services/export_service.dart';
 import '../categories/categories_page.dart';
 import '../profile/profile_page.dart';
 
@@ -19,6 +18,7 @@ class SettingsPage extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final profile = ref.watch(profileProvider);
 
+    final isDark = themeMode == ThemeMode.dark;
     final username = profile.value?['username'] ?? '';
 
     return Scaffold(
@@ -96,27 +96,22 @@ class SettingsPage extends ConsumerWidget {
             child: Column(
               children: [
                 SwitchListTile(
-                  secondary: const Icon(Icons.dark_mode),
-                  title: const Text('Modo Escuro'),
-                  value: themeMode == ThemeMode.dark,
-                  onChanged: (value) => ref.read(themeModeProvider.notifier).setThemeMode(value ? ThemeMode.dark : ThemeMode.light),
+                  secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
+                  title: Text(isDark ? 'Tema Escuro' : 'Tema Claro'),
+                  subtitle: const Text('Persistente neste dispositivo'),
+                  value: isDark,
+                  onChanged: (_) => ref.read(themeModeProvider.notifier).toggle(),
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.download),
-                  title: const Text('Exportar Despesas'),
-                  subtitle: const Text('CSV'),
+                  leading: const Icon(Icons.language),
+                  title: const Text('Idioma'),
+                  subtitle: const Text('Português (em breve)'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () async {
-                    try {
-                      await ExportService(supabase).exportExpensesAsCsv();
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Erro ao exportar: $e'), backgroundColor: Colors.red),
-                        );
-                      }
-                    }
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Traduções em breve')),
+                    );
                   },
                 ),
               ],

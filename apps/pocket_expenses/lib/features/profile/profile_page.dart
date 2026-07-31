@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pocketapps_auth/pocketapps_auth.dart';
 
-import '../../config/theme_provider.dart';
 import '../../core/providers/profile_provider.dart';
-import '../../core/services/export_service.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -14,7 +12,6 @@ class ProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final supabase = ref.watch(supabaseClientProvider);
     final user = supabase.auth.currentUser;
-    final themeMode = ref.watch(themeModeProvider);
     final profile = ref.watch(profileProvider);
     final settings = ref.watch(settingsProvider);
 
@@ -103,42 +100,6 @@ class ProfilePage extends ConsumerWidget {
                   value: notifications,
                   onChanged: (value) {
                     ref.read(profileActionsProvider).updateNotifications(value);
-                  },
-                ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  secondary: const Icon(Icons.dark_mode),
-                  title: const Text('Modo Escuro'),
-                  value: themeMode == ThemeMode.dark,
-                  onChanged: (value) => ref.read(themeModeProvider.notifier).setThemeMode(value ? ThemeMode.dark : ThemeMode.light),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Dados
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.download),
-                  title: const Text('Exportar Despesas'),
-                  subtitle: const Text('CSV'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () async {
-                    try {
-                      await ExportService(supabase).exportExpensesAsCsv();
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Erro ao exportar: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    }
                   },
                 ),
               ],

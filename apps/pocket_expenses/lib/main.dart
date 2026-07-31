@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:pocketapps_auth/pocketapps_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'config/app_config.dart';
 import 'config/theme.dart';
@@ -15,7 +16,21 @@ void main() async {
   await PocketAuth.initialize(appAuthConfig);
   await initializeDateFormatting('pt_PT');
 
-  runApp(const ProviderScope(child: PocketExpensesApp()));
+  final prefs = await SharedPreferences.getInstance();
+  final darkMode = prefs.getBool(darkModePrefKey) ?? false;
+
+  runApp(
+    ProviderScope(
+      overrides: [
+        themeModeProvider.overrideWith(
+          () => ThemeModeNotifier(
+            initial: darkMode ? ThemeMode.dark : ThemeMode.light,
+          ),
+        ),
+      ],
+      child: const PocketExpensesApp(),
+    ),
+  );
 }
 
 class PocketExpensesApp extends ConsumerWidget {
