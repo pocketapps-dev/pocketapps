@@ -1,47 +1,68 @@
+<div align="center">
+
 # PocketApps
 
-Monorepo das aplicações PocketApps.
+**Expenses · Fuel · Shopping** — a family of personal finance apps sharing one codebase and one auth system.
 
-## Estrutura
+Flutter · Supabase · Monorepo
+
+</div>
+
+## Overview
+
+PocketApps is a [Flutter](https://flutter.dev) monorepo with a shared authentication package and a common
+[Supabase](https://supabase.com) backend. Each app is a separate product that reuses the same auth flow,
+edge functions and database schema.
+
+| App | Purpose | Status |
+| --- | --- | --- |
+| [PocketExpenses](apps/pocket_expenses) | Track recurring and one-off expenses | Active |
+| [PocketFuel](apps/pocket_fuel) | Fuel, tolls and vehicle costs | Stub |
+| [PocketShopping](apps/pocket_shopping) | Shopping lists and purchases | Stub |
+
+## Repository structure
 
 ```
 packages/
-  pocketapps_auth/      # package Flutter partilhado (auth Supabase + Google, páginas de auth)
+  pocketapps_auth/      Shared Flutter package: Supabase + Google auth, auth pages
 apps/
-  pocket_expenses/      # gestão de despesas
-  pocket_fuel/          # combustível e despesas do veículo (stub)
-  pocket_shopping/      # listas de compras (stub)
+  pocket_expenses/      Expense tracker
+  pocket_fuel/          Vehicle & fuel costs (stub)
+  pocket_shopping/      Shopping lists (stub)
 supabase/
-  functions/            # edge functions partilhadas (send-welcome-email, delete-account)
-  schema.sql            # schema completo da base de dados
+  functions/            Shared edge functions (send-welcome-email, delete-account)
+  schema.sql            Source of truth for the database schema
+.github/
+  workflows/            CI pipeline
 ```
 
-## Autenticação partilhada
+## Shared authentication
 
-Cada app define um `AuthConfig` (`lib/config/app_config.dart`) com
-`appName`, credenciais Supabase, deep-link de callback e branding, e
-inicializa o auth no `main()`:
+Every app defines an `AuthConfig` in `lib/config/app_config.dart` (`appName`, Supabase credentials,
+deep-link callback and branding) and initializes the shared auth in `main()`:
 
 ```dart
 await PocketAuth.initialize(appAuthConfig);
 ```
 
-O `appName` separa os dados entre apps (`user_app_access` na base de dados),
-e toda a UI/logica de auth, as edge functions e o schema são partilhados.
+The `appName` scopes data per app (via `user_app_access` in the database), while all auth UI, logic,
+edge functions and the schema are shared.
 
-## Desenvolvimento
+## Getting started
 
 ```sh
-# dependências de todas as apps/package
+# Install dependencies
 cd packages/pocketapps_auth && flutter pub get
-cd apps/pocket_expenses && flutter pub get && flutter run
+cd apps/pocket_expenses && flutter pub get
+
+# Run an app
+cd apps/pocket_expenses && flutter run
 ```
 
-## Base de dados (Supabase)
-
-- `supabase/schema.sql` é a fonte de verdade do schema.
-- `supabase/functions/*` são as edge functions (deploy via Supabase CLI).
+Each app requires a Supabase project and a Google OAuth client — see the app READMEs.
 
 ## CI
 
-`.github/workflows/build.yml` compila o APK de `apps/pocket_expenses` em cada push para `main`.
+`.github/workflows/build.yml` builds the PocketExpenses release APK on every push to `main`.
+
+[![Build PocketExpenses APK](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build.yml/badge.svg)](https://github.com/pocketapps-dev/pocketapps/actions/workflows/build.yml)
