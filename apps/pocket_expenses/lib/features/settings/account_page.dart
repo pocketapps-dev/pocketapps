@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pocketapps_auth/pocketapps_auth.dart';
 
+import '../../core/providers/subscription_provider.dart';
+
 class AccountPage extends ConsumerWidget {
   const AccountPage({super.key});
 
@@ -12,11 +14,16 @@ class AccountPage extends ConsumerWidget {
     final user = supabase.auth.currentUser;
     final isEmailUser = user?.identities?.any((i) => i.provider != 'google') ?? true;
 
+    final subscription = ref.watch(subscriptionProvider).value;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Conta')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _PlanCard(subscription: subscription),
+          const SizedBox(height: 16),
+
           Card(
             child: Column(
               children: [
@@ -40,31 +47,15 @@ class AccountPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
 
-          // Premium (stub)
           Card(
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.star_outline, color: Colors.amber),
-                  title: const Text('PocketExpenses Premium'),
-                  subtitle: const Text('Em breve'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Premium em breve!')),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
                   leading: const Icon(Icons.code),
                   title: const Text('Código de Ativação'),
+                  subtitle: const Text('Ativa o plano Premium'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Premium em breve!')),
-                    );
-                  },
+                  onTap: () => _showActivationDialog(context, ref),
                 ),
               ],
             ),
@@ -90,5 +81,140 @@ class AccountPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  void _showActivationDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController();
+    bool isLoading = false;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Código de Ativação'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.characters,
+            decoration: const InputDecoration(
+              labelText: 'Código',
+              prefixIcon: Icon(Icons.vpn_key),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      setState(() => isLoading = true);
+                      final message = await ref
+                          .read(subscriptionActionsProvider)
+                          .redeem(controller.text);
+                      if (dialogContext.mounted) {
+                        Navigator.pop(dialogContext);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(message),
+                            backgroundColor:
+                                message == 'Premium ativado com sucesso!'
+                                    ? Colors.green
+                                    : Colors.red,
+                          ),
+                        );
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Ativar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanCard extends ConsumerWidget {
+  const _PlanCard({required this.subscription});
+
+  final dynamic subscription;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isPremium = subscription?.isActive == true;
+    final planName = subscription?.displayName ?? 'Free';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: isPremium
+                  ? Colors.amber.shade100
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: Icon(
+                isPremium ? Icons.star : Icons.person,
+                color: isPremium
+                    ? Colors.amber.shade800
+                    : Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isPremium ? 'PocketExpenses $planName' : 'Plano Free',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isPremium
+                        ? 'Ativo até ${_formatDate(subscription.endsAt)}'
+                        : 'Ativa o Premium com um código',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            if (isPremium)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'PREMIUM',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.amber.shade900,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'indeterminado';
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }

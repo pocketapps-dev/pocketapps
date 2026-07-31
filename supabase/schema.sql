@@ -596,29 +596,31 @@ begin
     and is_active = true;
 
   if not found then
-    return jsonb_build_object('valid', false, 'error', 'Invalid code');
+    return jsonb_build_object('valid', false, 'error', 'Código inválido');
   end if;
 
   if v_code.expires_at is not null and v_code.expires_at < now() then
-    return jsonb_build_object('valid', false, 'error', 'Code expired');
+    return jsonb_build_object('valid', false, 'error', 'Código expirado');
   end if;
 
   if v_code.use_count >= v_code.max_uses then
-    return jsonb_build_object('valid', false, 'error', 'Code fully used');
+    return jsonb_build_object('valid', false, 'error', 'Código totalmente utilizado');
   end if;
 
-  insert into public.subscriptions (user_id, app_name, plan, status, started_at, ends_at)
+  insert into public.subscriptions (user_id, app_name, plan, status, started_at, ends_at, payment_provider)
   values (
     v_user_id, p_app_name, v_code.plan, 'active', now(),
-    now() + (v_code.duration_months || ' months')::interval
+    now() + (v_code.duration_months || ' months')::interval, 'activation_code'
   )
   on conflict (user_id, app_name) do update
   set plan = v_code.plan, status = 'active', started_at = now(),
       ends_at = now() + (v_code.duration_months || ' months')::interval,
+      payment_provider = 'activation_code',
       updated_at = now();
 
   update public.activation_codes
-  set use_count = use_count + 1, used_by = v_user_id, used_at = now()
+  set use_count = use_count + 1, used_by = v_user_id, used_at = now(),
+      is_active = case when use_count + 1 >= max_uses then false else true end
   where id = v_code.id;
 
   return jsonb_build_object(

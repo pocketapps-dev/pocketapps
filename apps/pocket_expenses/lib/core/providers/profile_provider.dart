@@ -12,11 +12,6 @@ final profileProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   return service.getProfile();
 });
 
-final settingsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  final service = ref.read(profileServiceProvider);
-  return service.getSettings();
-});
-
 final profileActionsProvider = Provider<ProfileActions>((ref) {
   return ProfileActions(ref);
 });
@@ -38,10 +33,5 @@ class ProfileActions {
     } catch (_) {
       return false;
     }
-  }
-
-  Future<void> updateBudget(double? budget) async {
-    await _service.updateSettings(monthlyBudget: budget);
-    _ref.invalidate(settingsProvider);
   }
 }

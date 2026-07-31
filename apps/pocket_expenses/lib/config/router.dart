@@ -7,6 +7,8 @@ import '../core/providers/category_provider.dart';
 import '../features/home/home_page.dart';
 import '../features/profile/edit_profile_page.dart';
 import '../features/profile/currency_settings_page.dart';
+import '../features/settings/about_page.dart';
+import '../features/settings/report_settings_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(authStateProvider, (prev, next) {
@@ -87,6 +89,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/delete-account',
         builder: (context, state) => const DeleteAccountPage(),
+      ),
+      GoRoute(
+        path: '/settings/reports',
+        builder: (context, state) => const ReportSettingsPage(),
+      ),
+      GoRoute(
+        path: '/settings/about',
+        builder: (context, state) => const AboutPage(),
       ),
     ],
   );
