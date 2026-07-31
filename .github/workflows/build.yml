@@ -37,6 +37,11 @@ jobs:
           key: gradle-${{ hashFiles('android/**/*.gradle.kts', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
+      - name: Restore release keystore
+        run: echo "$RELEASE_KEYSTORE" | base64 -d > android/app/release.keystore
+        env:
+          RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
+
       - name: Install dependencies
         run: flutter pub get
 
