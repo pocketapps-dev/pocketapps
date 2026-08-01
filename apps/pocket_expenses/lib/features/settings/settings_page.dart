@@ -163,7 +163,7 @@ class SettingsPage extends ConsumerWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.settings_outlined),
-                  title: const Text('Preferências'),
+                  title: const Text('Geral'),
                   subtitle: const Text('Tema, idioma, moeda'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -205,21 +205,13 @@ class SettingsPage extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.account_circle_outlined),
                   title: const Text('Conta'),
-                  subtitle: const Text('Email, palavra-passe, plano'),
+                  subtitle: const Text('Email, palavra-passe, plano, dados'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const AccountPage()),
                     );
                   },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.download_outlined),
-                  title: const Text('Exportar dados'),
-                  subtitle: const Text('Descarrega os teus dados (JSON/CSV)'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/settings/export'),
                 ),
               ],
             ),

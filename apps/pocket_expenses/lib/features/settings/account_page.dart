@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pocketapps_auth/pocketapps_auth.dart';
 
 import '../../core/providers/subscription_provider.dart';
+import 'activation_code_dialog.dart';
 
 class AccountPage extends ConsumerWidget {
   const AccountPage({super.key});
@@ -55,7 +56,15 @@ class AccountPage extends ConsumerWidget {
                   title: const Text('Código de Ativação'),
                   subtitle: const Text('Ativa o plano Premium'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showActivationDialog(context, ref),
+                  onTap: () => showActivationCodeDialog(context, ref),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.download_outlined),
+                  title: const Text('Exportar dados'),
+                  subtitle: const Text('Descarrega os teus dados (JSON/CSV)'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/settings/export'),
                 ),
               ],
             ),
@@ -79,64 +88,6 @@ class AccountPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
         ],
-      ),
-    );
-  }
-
-  void _showActivationDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
-    bool isLoading = false;
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Código de Ativação'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
-              labelText: 'Código',
-              prefixIcon: Icon(Icons.vpn_key),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      setState(() => isLoading = true);
-                      final message = await ref
-                          .read(subscriptionActionsProvider)
-                          .redeem(controller.text);
-                      if (dialogContext.mounted) {
-                        Navigator.pop(dialogContext);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(message),
-                            backgroundColor:
-                                message == 'Premium ativado com sucesso!'
-                                    ? Colors.green
-                                    : Colors.red,
-                          ),
-                        );
-                      }
-                    },
-              child: isLoading
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Ativar'),
-            ),
-          ],
-        ),
       ),
     );
   }

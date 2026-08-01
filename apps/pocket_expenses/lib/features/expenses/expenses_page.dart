@@ -506,13 +506,26 @@ class _ExpenseTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color,
-          child: Icon(
-            _getIconData(expense.categoryIcon ?? 'category'),
-            color: Colors.white,
-            size: 20,
-          ),
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Checkbox(
+              value: isPaid,
+              onChanged: (_) => onTogglePaid(),
+              activeColor: Colors.green,
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            const SizedBox(width: 4),
+            CircleAvatar(
+              backgroundColor: color,
+              child: Icon(
+                _getIconData(expense.categoryIcon ?? 'category'),
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ],
         ),
         title: Text(
           expense.name,
@@ -549,19 +562,6 @@ class _ExpenseTile extends StatelessWidget {
                 }
               },
               itemBuilder: (context) => [
-                PopupMenuItem(
-                  onTap: onTogglePaid,
-                  child: ListTile(
-                    leading: Icon(
-                      isPaid ? Icons.check_circle : Icons.circle_outlined,
-                      color: isPaid ? Colors.green : null,
-                    ),
-                    title: Text(
-                      isPaid ? 'Marcar como nao pago' : 'Marcar como pago',
-                    ),
-                    dense: true,
-                  ),
-                ),
                 PopupMenuItem(
                   onTap: onToggleSkip,
                   child: ListTile(

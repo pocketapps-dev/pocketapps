@@ -9,6 +9,7 @@ import '../features/profile/edit_profile_page.dart';
 import '../features/profile/currency_settings_page.dart';
 import '../features/settings/about_page.dart';
 import '../features/settings/export_data_page.dart';
+import '../features/settings/plans_page.dart';
 import '../features/settings/report_settings_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -103,6 +104,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings/about',
         builder: (context, state) => const AboutPage(),
+      ),
+      GoRoute(
+        path: '/settings/plans',
+        builder: (context, state) => const PlansPage(),
       ),
     ],
   );

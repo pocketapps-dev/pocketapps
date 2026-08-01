@@ -1,14 +1,17 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../config/currency_provider.dart';
 import '../../core/models/category.dart';
 import '../../core/models/expense.dart';
 import '../../core/models/monthly_status.dart';
+import '../../core/models/subscription.dart';
 import '../../core/providers/category_provider.dart';
 import '../../core/providers/expense_provider.dart';
+import '../../core/providers/subscription_provider.dart';
 
 class DashboardTab extends ConsumerStatefulWidget {
   final VoidCallback onRefresh;
@@ -88,6 +91,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     final expensesAsync = ref.watch(expensesProvider(true));
     final statusesAsync = ref.watch(monthlyStatusesProvider(_selectedMonth));
     final categoriesAsync = ref.watch(categoriesProvider('expenses'));
+    final subscription = ref.watch(subscriptionProvider).value;
     final currencyFormat = currencyFormatFor(ref.watch(currencyProvider));
 
     return SafeArea(
@@ -106,6 +110,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
               statuses,
               categories,
               currencyFormat,
+              subscription,
             ),
           ),
         ),
@@ -119,6 +124,7 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
     Map<String, MonthlyStatus> statuses,
     List<Category> categories,
     NumberFormat currencyFormat,
+    Subscription? subscription,
   ) {
     final activeExpenses = expenses
         .where((e) => statuses[e.id]?.isSkipped != true)
@@ -255,6 +261,8 @@ class _DashboardTabState extends ConsumerState<DashboardTab> {
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        _PlanBanner(subscription: subscription),
         const SizedBox(height: 20),
         if (expenses.isEmpty)
           Center(
@@ -559,5 +567,76 @@ class _SummaryCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _PlanBanner extends StatelessWidget {
+  final Subscription? subscription;
+
+  const _PlanBanner({required this.subscription});
+
+  @override
+  Widget build(BuildContext context) {
+    final isPremium = subscription?.isActive == true;
+    final planName = subscription?.displayName ?? 'Free';
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.push('/settings/plans'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: isPremium
+                    ? Colors.amber.shade100
+                    : Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
+                child: Icon(
+                  isPremium ? Icons.workspace_premium : Icons.person_outline,
+                  size: 20,
+                  color: isPremium
+                      ? Colors.amber.shade800
+                      : Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isPremium ? 'PocketExpenses $planName' : 'Plano Free',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isPremium
+                          ? 'Ativo até ${_formatDate(subscription?.endsAt)}'
+                          : 'Faz upgrade para Premium por €1.99 (uma vez)',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'indeterminado';
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }

@@ -21,6 +21,11 @@
 - [x] 2. `SET search_path = ''` em `get_email_by_username` + `check_username_available`
 - [x] 3. Atualizar `schema.sql` em paralelo (incluiu criar as 2 funções ausentes no schema)
 
-## Tarefa C — Páginas legais (BLOQUEADA no dono)
-- [ ] Entregar rascunhos `docs/legal/` + documentar correções do site
+## Tarefa C — Páginas legais ✅ COMPLETA
+- [x] Rascunhos em `docs/legal/` (termos-de-servico.md, politica-de-privacidade.md)
+- [x] Páginas `/terms` e `/privacy` publicadas no site (repo `pocketapps-dev/pocketapps.github.io`):
+  - `terms.html` e `privacy.html` com o mesmo estilo/estrutura do index
+  - CSS legal (`.legal-section`, `.legal-container`, `.legal-table`) em `style.css`
+  - Rodapé do `index.html` com link para `/terms`
+- [x] Verificado online: `https://pocketapps.pt/terms` e `https://pocketapps.pt/privacy` (HTTP 200)
 

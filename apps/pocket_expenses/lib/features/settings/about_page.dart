@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'legal_page.dart';
+
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
 
@@ -69,15 +71,68 @@ class _AboutPageState extends State<AboutPage> {
                 ListTile(
                   leading: const Icon(Icons.description_outlined),
                   title: const Text('Termos de Serviço'),
-                  trailing: const Icon(Icons.open_in_new, size: 18),
-                  onTap: () => _openUrl('https://pocketapps.pt/terms'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const LegalPage(
+                          title: 'Termos de Serviço',
+                          icon: Icons.description_outlined,
+                          description:
+                              'Resumo dos Termos de Serviço da PocketExpenses.',
+                          points: [
+                            'A PocketExpenses destina-se à gestão pessoal de '
+                                'despesas recorrentes e únicas.',
+                            'És responsável por manter a tua conta e '
+                                'credenciais em segurança.',
+                            'O plano Free é gratuito. Premium e Founder são '
+                                'ativados mediante pagamento único e código '
+                                'de ativação.',
+                            'É proibido usar o serviço para fins ilegais ou '
+                                'para violar direitos de terceiros.',
+                            'Os teus dados podem ser exportados ou eliminados '
+                                'a qualquer momento a partir da conta.',
+                            'O serviço é fornecido "como está", podendo ser '
+                                'atualizado ou descontinuado com aviso prévio.',
+                          ],
+                          websiteUrl: 'https://pocketapps.pt/terms',
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
                   title: const Text('Política de Privacidade'),
-                  trailing: const Icon(Icons.open_in_new, size: 18),
-                  onTap: () => _openUrl('https://pocketapps.pt/privacy'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const LegalPage(
+                          title: 'Política de Privacidade',
+                          icon: Icons.privacy_tip_outlined,
+                          description:
+                              'Resumo da Política de Privacidade da '
+                              'PocketExpenses.',
+                          points: [
+                            'Recolhemos apenas os dados necessários: email, '
+                                'nome de utilizador, despesas e preferências.',
+                            'Os dados são usados para autenticação, '
+                                'sincronização e relatórios por email.',
+                            'Os dados são armazenados de forma segura em '
+                                'servidores na cloud.',
+                            'Não partilhamos os teus dados com terceiros para '
+                                'fins de publicidade.',
+                            'Podes exercer os teus direitos RGPD: acesso, '
+                                'retificação, portabilidade e eliminação.',
+                            'Para questões, contacta geral@pocketapps.pt.',
+                          ],
+                          websiteUrl: 'https://pocketapps.pt/privacy',
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 const Divider(height: 1),
                 ListTile(
