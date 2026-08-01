@@ -50,14 +50,15 @@ class SettingsPage extends ConsumerWidget {
                       children: [
                         Text(
                           '@$username',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         Text(
                           user?.email ?? '',
-                          style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade500,
+                          ),
                         ),
                       ],
                     ),
@@ -167,7 +168,9 @@ class SettingsPage extends ConsumerWidget {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const PreferencesPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const PreferencesPage(),
+                      ),
                     );
                   },
                 ),
@@ -175,7 +178,9 @@ class SettingsPage extends ConsumerWidget {
                 ListTile(
                   leading: const Icon(Icons.email_outlined),
                   title: const Text('Relatórios por Email'),
-                  subtitle: const Text('Recebe resumos mensais das tuas despesas'),
+                  subtitle: const Text(
+                    'Recebe resumos mensais das tuas despesas',
+                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/settings/reports'),
                 ),
@@ -207,6 +212,14 @@ class SettingsPage extends ConsumerWidget {
                       MaterialPageRoute(builder: (_) => const AccountPage()),
                     );
                   },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.download_outlined),
+                  title: const Text('Exportar dados'),
+                  subtitle: const Text('Descarrega os teus dados (JSON/CSV)'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/settings/export'),
                 ),
               ],
             ),
@@ -244,7 +257,10 @@ class SettingsPage extends ConsumerWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text('Terminar Sessão', style: TextStyle(color: Colors.red)),
+                  title: const Text(
+                    'Terminar Sessão',
+                    style: TextStyle(color: Colors.red),
+                  ),
                   onTap: () async {
                     await PocketAuth.signOut();
                     if (context.mounted) context.go('/auth');

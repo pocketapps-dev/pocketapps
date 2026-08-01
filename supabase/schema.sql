@@ -356,24 +356,13 @@ create policy "Users can update own report preferences"
 -- SEED DATA: Default categories
 -- ============================================================
 
--- PocketExpenses categories
+-- PocketExpenses categories (official list, matches CategoryService.seedDefaultCategories())
 insert into public.categories (app_name, name, icon_name, color_hex, is_default, sort_order) values
-  ('expenses', 'Casa',          'home',          '#f59e0b', true, 1),
-  ('expenses', 'Electricidade', 'bolt',          '#eab308', true, 2),
-  ('expenses', 'Agua',          'water_drop',    '#3b82f6', true, 3),
-  ('expenses', 'Gas',           'local_fire_department', '#ef4444', true, 4),
-  ('expenses', 'Veiculo',       'directions_car', '#8b5cf6', true, 5),
-  ('expenses', 'Subscricoes',   'subscriptions', '#06b6d4', true, 6),
-  ('expenses', 'Credito',       'account_balance', '#6366f1', true, 7),
-  ('expenses', 'Saude',         'favorite',      '#ec4899', true, 8),
-  ('expenses', 'Alimentacao',   'shopping_cart',  '#22c55e', true, 9),
-  ('expenses', 'Restauracao',   'restaurant',    '#f97316', true, 10),
-  ('expenses', 'Lazer',         'sports_esports', '#a855f7', true, 11),
-  ('expenses', 'Educacao',      'school',        '#14b8a6', true, 12),
-  ('expenses', 'Telecomunicacoes', 'phone',      '#64748b', true, 13),
-  ('expenses', 'Seguros',       'shield',        '#0ea5e9', true, 14),
-  ('expenses', 'Roupa',         'checkroom',     '#d946ef', true, 15),
-  ('expenses', 'Outros',        'category',      '#78716c', true, 99);
+  ('expenses', 'Habitação',     'home',              '#EF4444', true, 1),
+  ('expenses', 'Veículo',       'directions_car',    '#3B82F6', true, 2),
+  ('expenses', 'Crédito',       'credit_card',       '#F59E0B', true, 3),
+  ('expenses', 'Subscrições',   'subscriptions',     '#6366F1', true, 4),
+  ('expenses', 'Sem Categoria', 'category',          '#94A3B8', true, 5);
 
 -- PocketFuel categories
 insert into public.categories (app_name, name, icon_name, color_hex, is_default, sort_order) values
@@ -422,6 +411,7 @@ as $$
 $$;
 
 -- Grant an existing user access to an app (+ free subscription)
+-- Requires an authenticated session (anon/PUBLIC EXECUTE revoked).
 create or replace function public.add_app_access(p_email text, p_app_name text)
 returns void
 language plpgsql
@@ -446,19 +436,31 @@ begin
 end;
 $$;
 
--- Check if the welcome email was already sent for the current user in this app
-create or replace function public.check_welcome_email_sent(p_app_name text)
-returns boolean
+revoke execute on function public.add_app_access(text, text) from public;
+grant execute on function public.add_app_access(text, text) to authenticated;
+grant execute on function public.add_app_access(text, text) to service_role;
+
+-- Get the email associated with a username (used for password reset flows)
+create or replace function public.get_email_by_username(p_username text)
+returns text
 language sql
 stable
 security definer
-set search_path = public
+set search_path = ''
 as $$
-  select coalesce(
-    (select welcome_email_sent from public.user_app_access
-     where user_id = auth.uid() and app_name = p_app_name),
-    false
-  );
+  SELECT email FROM auth.users
+  WHERE id = (SELECT id FROM public.profiles WHERE username = lower(p_username) LIMIT 1)
+  LIMIT 1;
+$$;
+
+-- Check if a username is available
+create or replace function public.check_username_available(p_username text)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  SELECT NOT EXISTS (SELECT 1 FROM public.profiles WHERE username = lower(p_username))
 $$;
 
 -- Get or create monthly status for an expense in a given month

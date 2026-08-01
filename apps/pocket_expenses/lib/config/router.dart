@@ -8,6 +8,7 @@ import '../features/home/home_page.dart';
 import '../features/profile/edit_profile_page.dart';
 import '../features/profile/currency_settings_page.dart';
 import '../features/settings/about_page.dart';
+import '../features/settings/export_data_page.dart';
 import '../features/settings/report_settings_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -36,8 +37,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       const publicRoutes = [
-        '/auth', '/email-confirmation', '/auth-callback',
-        '/request-reset', '/set-new-password',
+        '/auth',
+        '/email-confirmation',
+        '/auth-callback',
+        '/request-reset',
+        '/set-new-password',
       ];
       final isPublicRoute = publicRoutes.contains(location);
 
@@ -46,17 +50,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const HomePage(),
-      ),
+      GoRoute(path: '/', builder: (context, state) => const HomePage()),
       GoRoute(
         path: '/auth',
         builder: (context, state) => AuthPage(onNewUser: seedNewUser),
       ),
       GoRoute(
         path: '/email-confirmation',
-        builder: (context, state) => EmailConfirmationPage(onNewUser: seedNewUser),
+        builder: (context, state) =>
+            EmailConfirmationPage(onNewUser: seedNewUser),
       ),
       GoRoute(
         path: '/auth-callback',
@@ -93,6 +95,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings/reports',
         builder: (context, state) => const ReportSettingsPage(),
+      ),
+      GoRoute(
+        path: '/settings/export',
+        builder: (context, state) => const ExportDataPage(),
       ),
       GoRoute(
         path: '/settings/about',
