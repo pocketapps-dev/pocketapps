@@ -10,11 +10,11 @@ const corsHeaders = {
 const APP = { name: "PocketExpenses", color: "#6366F1" };
 
 async function sendSmtpEmail(to: string, subject: string, html: string): Promise<boolean> {
-  const host = Deno.env.get("SMTP_HOST") || "smtp.zoho.eu";
+  const host = Deno.env.get("SMTP_HOST") || "smtp-relay.brevo.com";
   const port = parseInt(Deno.env.get("SMTP_PORT") || "587");
   const user = Deno.env.get("SMTP_USER") || "";
   const pass = Deno.env.get("SMTP_PASS") || "";
-  const from = Deno.env.get("SMTP_FROM") || user;
+  const from = Deno.env.get("SMTP_FROM") || "no-reply@pocketapps.pt";
 
   if (!user || !pass) {
     console.error("[EMAIL] Credenciais em falta");
