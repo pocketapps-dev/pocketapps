@@ -1,4 +1,4 @@
-name: Build PocketExpenses APK
+﻿name: Build PocketExpenses APK
 
 on:
   push:
@@ -9,6 +9,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: apps/pocket_expenses
@@ -54,9 +56,28 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Upload APK
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/PocketExpenses.apk
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: pocket-expenses-apk
-          path: apps/pocket_expenses/build/app/outputs/flutter-apk/app-release.apk
+          path: apps/pocket_expenses/build/app/outputs/flutter-apk/PocketExpenses.apk
           retention-days: 30
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: pocketexpenses-latest
+          name: PocketExpenses Latest
+          body: |
+            Latest PocketExpenses APK build from main branch.
+
+            Instalacao:
+            1. Descarrega o ficheiro PocketExpenses.apk
+            2. Permite a instalacao de apps de origens desconhecidas
+            3. Instala e abre a app
+          files: apps/pocket_expenses/build/app/outputs/flutter-apk/PocketExpenses.apk
+          prerelease: false
+          make_latest: true

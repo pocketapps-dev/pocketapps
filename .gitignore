@@ -31,5 +31,12 @@ supabase/.temp/
 .DS_Store
 Thumbs.db
 
+# Temporary / fetched site files
+site_*.html
+fetch_site.ps1
+
+# Cloned website repo (not part of monorepo)
+pocketapps.github.io/
+
 # Editor
 .vscode/
