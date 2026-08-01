@@ -116,7 +116,7 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
   return { total, recurring, unique, byCategory: sortedCat };
 }
 
-function buildReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean): string {
+function buildReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, unsubscribeUrl: string): string {
   const label = monthLabel(monthStart);
   const max = data.byCategory.length ? data.byCategory[0][1] : 1;
 
@@ -177,7 +177,7 @@ function buildReportHtml(userName: string, data: any, monthStart: Date, includeC
         <tr><td style="padding:24px 30px; border-top:1px solid #e5e7eb;">
           <p style="color:#9ca3af; font-size:13px; margin:0; text-align:center;">
             PocketApps · Relatório gerado automaticamente.<br>
-            <a href="https://pocketapps.pt/unsubscribe" style="color:#9ca3af;">Gerir preferências de relatórios</a>
+            <a href="${unsubscribeUrl}" style="color:#9ca3af;">Cancelar subscrição destes relatórios</a>
           </p>
         </td></tr>
       </table>
@@ -217,7 +217,7 @@ serve(async (req: Request) => {
       const hour = now.getHours();
       const { data: prefs } = await supabase
         .from("report_preferences")
-        .select("user_id, report_day, report_hour, include_categories, include_charts, app_name")
+        .select("user_id, report_day, report_hour, include_categories, include_charts, app_name, unsubscribe_token")
         .eq("email_reports_enabled", true)
         .eq("report_day", day)
         .eq("report_hour", hour);
@@ -242,23 +242,26 @@ serve(async (req: Request) => {
       const monthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
 
       let prefsRow: any = {};
-      if (!authHeader) {
-        const { data } = await supabase
-          .from("report_preferences")
-          .select("include_categories, include_charts, app_name")
-          .eq("user_id", t.user_id)
-          .maybeSingle();
-        prefsRow = data || {};
-      }
+      const { data: prefsData } = await supabase
+        .from("report_preferences")
+        .select("include_categories, include_charts, app_name, unsubscribe_token")
+        .eq("user_id", t.user_id)
+        .maybeSingle();
+      prefsRow = prefsData || {};
 
       const appName = prefsRow.app_name || "expenses";
       const data = await fetchReportData(supabase, t.user_id, appName, monthStart.toISOString(), monthEnd.toISOString());
       const includeCategories = prefsRow.include_categories !== false;
       const includeCharts = prefsRow.include_charts !== false;
+      const token = prefsRow.unsubscribe_token;
+      const baseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+      const unsubscribeUrl = token
+        ? `${baseUrl}/functions/v1/report-unsubscribe?token=${token}`
+        : "https://pocketapps.pt";
 
       const userName = t.email.split("@")[0];
       const subject = `O teu relatório de ${monthLabel(monthStart)} 📊`;
-      const html = buildReportHtml(userName, data, monthStart, includeCategories, includeCharts);
+      const html = buildReportHtml(userName, data, monthStart, includeCategories, includeCharts, unsubscribeUrl);
       const ok = await sendSmtpEmail(t.email, subject, html);
       results.push(`${t.user_id}:${ok ? "sent" : "failed"}`);
     }

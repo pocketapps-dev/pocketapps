@@ -64,13 +64,42 @@ class PocketAuth {
   }
 
   /// Sign up with email/password, tagging the user with this app's name.
-  static Future<void> signUpWithEmail(String email, String password) async {
+  ///
+  /// [privacyAccepted], [termsAccepted] and [ageConfirmed] are stored in the
+  /// user metadata and recorded on the profile by the `handle_new_user`
+  /// trigger (GDPR consent evidence).
+  static Future<void> signUpWithEmail(
+    String email,
+    String password, {
+    bool privacyAccepted = false,
+    bool termsAccepted = false,
+    bool ageConfirmed = false,
+  }) async {
     await client.auth.signUp(
       email: email,
       password: password,
-      data: {'app_name': config.appName},
+      data: {
+        'app_name': config.appName,
+        'privacy_accepted': privacyAccepted,
+        'terms_accepted': termsAccepted,
+        'age_confirmed': ageConfirmed,
+      },
       emailRedirectTo: config.emailRedirectUri,
     );
+  }
+
+  /// Records privacy/terms/age consent on the current user's profile.
+  static Future<void> recordConsent() async {
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) return;
+    await client
+        .from('profiles')
+        .update({
+          'privacy_accepted_at': DateTime.now().toUtc().toIso8601String(),
+          'terms_accepted_at': DateTime.now().toUtc().toIso8601String(),
+          'age_confirmed_at': DateTime.now().toUtc().toIso8601String(),
+        })
+        .eq('id', userId);
   }
 
   /// Sign in with email/password and verify access to this app.

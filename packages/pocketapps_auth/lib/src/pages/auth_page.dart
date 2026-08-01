@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../auth_service.dart';
 
@@ -26,6 +27,8 @@ class _AuthPageState extends ConsumerState<AuthPage> {
   bool _isLogin = true;
   bool _isLoading = false;
   bool _isGoogleInitializing = true;
+  bool _privacyAccepted = false;
+  bool _ageConfirmed = false;
   String? _googleInitError;
 
   @override
@@ -71,6 +74,16 @@ class _AuthPageState extends ConsumerState<AuthPage> {
       return;
     }
 
+    if (!_isLogin && !_privacyAccepted) {
+      _showError('Tens de aceitar a Política de Privacidade e os Termos para criar uma conta');
+      return;
+    }
+
+    if (!_isLogin && !_ageConfirmed) {
+      _showError('Tens de confirmar que tens 16 anos ou mais para criar uma conta');
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       if (_isLogin) {
@@ -84,7 +97,13 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         if (mounted) context.go('/');
       } else {
         try {
-          await PocketAuth.signUpWithEmail(email, password);
+          await PocketAuth.signUpWithEmail(
+            email,
+            password,
+            privacyAccepted: _privacyAccepted,
+            termsAccepted: _privacyAccepted,
+            ageConfirmed: _ageConfirmed,
+          );
           if (mounted) context.push('/email-confirmation');
         } on AuthException catch (e) {
           if (e.message.contains('already registered') || e.message.contains('already exists')) {
@@ -128,6 +147,16 @@ class _AuthPageState extends ConsumerState<AuthPage> {
 
       final isNew = await PocketAuth.signInWithGoogle(idToken, null);
       if (isNew) {
+        final accepted = await _requestConsentForGoogle();
+        if (!accepted) {
+          try {
+            await PocketAuth.deleteAccount();
+          } catch (_) {}
+          await PocketAuth.signOut();
+          if (mounted) _showError('Precisas de aceitar os Termos e a Política de Privacidade para continuar');
+          return;
+        }
+        await PocketAuth.recordConsent();
         await widget.onNewUser?.call();
       }
       await PocketAuth.sendWelcomeEmail(googleUser.email);
@@ -154,6 +183,26 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: Colors.red, duration: const Duration(seconds: 4)),
     );
+  }
+
+  Future<bool> _requestConsentForGoogle() async {
+    final accepted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _ConsentDialog(
+        websiteUrl: PocketAuth.config.websiteUrl,
+        primaryColor: PocketAuth.config.primaryColor,
+      ),
+    );
+    return accepted == true;
+  }
+
+  Future<void> _openLegalLink(String url) async {
+    final uri = Uri.parse(url);
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      _showError('Nao foi possivel abrir o link');
+    }
   }
 
   @override
@@ -233,7 +282,61 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     prefixIcon: Icon(Icons.lock_outlined),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  value: _ageConfirmed,
+                  onChanged: (v) => setState(() => _ageConfirmed = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text(
+                    'Tenho 16 anos ou mais',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+                CheckboxListTile(
+                  value: _privacyAccepted,
+                  onChanged: (v) => setState(() => _privacyAccepted = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(text: 'Li e aceito a '),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.baseline,
+                          baseline: TextBaseline.alphabetic,
+                          child: GestureDetector(
+                            onTap: () => _openLegalLink('${PocketAuth.config.websiteUrl}/privacy'),
+                            child: Text(
+                              'Política de Privacidade',
+                              style: TextStyle(
+                                color: PocketAuth.config.primaryColor,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const TextSpan(text: ' e os '),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.baseline,
+                          baseline: TextBaseline.alphabetic,
+                          child: GestureDetector(
+                            onTap: () => _openLegalLink('${PocketAuth.config.websiteUrl}/terms'),
+                            child: Text(
+                              'Termos de Serviço',
+                              style: TextStyle(
+                                color: PocketAuth.config.primaryColor,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+                const SizedBox(height: 8),
               ],
               if (_isLogin)
                 Align(
@@ -291,5 +394,101 @@ class _AuthPageState extends ConsumerState<AuthPage> {
         ),
       ),
     );
+  }
+}
+
+class _ConsentDialog extends StatefulWidget {
+  const _ConsentDialog({required this.websiteUrl, required this.primaryColor});
+
+  final String websiteUrl;
+  final Color primaryColor;
+
+  @override
+  State<_ConsentDialog> createState() => _ConsentDialogState();
+}
+
+class _ConsentDialogState extends State<_ConsentDialog> {
+  bool _ageConfirmed = false;
+  bool _privacyAccepted = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Bem-vindo a PocketApps'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Para criar a tua conta, precisamos do teu consentimento:'),
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              value: _ageConfirmed,
+              onChanged: (v) => setState(() => _ageConfirmed = v ?? false),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Tenho 16 anos ou mais', style: TextStyle(fontSize: 14)),
+            ),
+            CheckboxListTile(
+              value: _privacyAccepted,
+              onChanged: (v) => setState(() => _privacyAccepted = v ?? false),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              title: Text.rich(
+                TextSpan(
+                  children: [
+                    const TextSpan(text: 'Li e aceito a '),
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.baseline,
+                      baseline: TextBaseline.alphabetic,
+                      child: GestureDetector(
+                        onTap: () => _open('${widget.websiteUrl}/privacy'),
+                        child: Text(
+                          'Política de Privacidade',
+                          style: TextStyle(
+                            color: widget.primaryColor,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const TextSpan(text: ' e os '),
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.baseline,
+                      baseline: TextBaseline.alphabetic,
+                      child: GestureDetector(
+                        onTap: () => _open('${widget.websiteUrl}/terms'),
+                        child: Text(
+                          'Termos de Serviço',
+                          style: TextStyle(
+                            color: widget.primaryColor,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Nao aceito'),
+        ),
+        FilledButton(
+          onPressed: (_ageConfirmed && _privacyAccepted) ? () => Navigator.of(context).pop(true) : null,
+          child: const Text('Aceitar'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _open(String url) async {
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 }

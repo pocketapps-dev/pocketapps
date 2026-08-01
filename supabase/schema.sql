@@ -13,22 +13,29 @@ create extension if not exists "uuid-ossp";
 -- 1. PROFILES (extends auth.users)
 -- ============================================================
 create table public.profiles (
-  id          uuid primary key references auth.users(id) on delete cascade,
-  full_name   text,
-  username    text,
-  avatar_url  text,
-  locale      text not null default 'pt-PT',
-  currency    text not null default 'EUR',
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
+  id                  uuid primary key references auth.users(id) on delete cascade,
+  full_name           text,
+  username            text,
+  avatar_url          text,
+  locale              text not null default 'pt-PT',
+  currency            text not null default 'EUR',
+  privacy_accepted_at timestamptz,
+  terms_accepted_at   timestamptz,
+  age_confirmed_at    timestamptz,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
 );
 
 -- Auto-create profile + per-app access + free subscription on signup
 -- The app_name comes from the signup metadata (set via PocketAuth).
 create or replace function public.handle_new_user()
-returns trigger as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
 begin
-  insert into public.profiles (id, username, full_name, avatar_url)
+  insert into public.profiles (id, username, full_name, avatar_url, privacy_accepted_at, terms_accepted_at, age_confirmed_at)
   values (
     new.id,
     lower(coalesce(
@@ -38,7 +45,10 @@ begin
       'user'
     )),
     coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name', ''),
-    coalesce(new.raw_user_meta_data ->> 'avatar_url', '')
+    coalesce(new.raw_user_meta_data ->> 'avatar_url', ''),
+    case when coalesce(new.raw_user_meta_data ->> 'privacy_accepted', 'false') = 'true' then now() end,
+    case when coalesce(new.raw_user_meta_data ->> 'terms_accepted', 'false') = 'true' then now() end,
+    case when coalesce(new.raw_user_meta_data ->> 'age_confirmed', 'false') = 'true' then now() end
   );
 
   insert into public.user_app_access (user_id, app_name)
@@ -201,6 +211,7 @@ create table public.report_preferences (
   report_hour             integer not null default 9 check (report_hour between 0 and 23),
   include_categories      boolean not null default true,
   include_charts          boolean not null default true,
+  unsubscribe_token       uuid default gen_random_uuid(),
   created_at              timestamptz not null default now(),
   updated_at              timestamptz not null default now(),
   unique(user_id, app_name)
