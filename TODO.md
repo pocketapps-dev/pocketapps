@@ -29,3 +29,13 @@
   - Rodapé do `index.html` com link para `/terms`
 - [x] Verificado online: `https://pocketapps.pt/terms` e `https://pocketapps.pt/privacy` (HTTP 200)
 
+## Tarefa D — Infraestrutura de email ✅ COMPLETA
+- [x] Senders Brevo ativos (no-reply, suporte, billing, marketing) + domínio `pocketapps.pt` autenticado e verificado
+- [x] DNS verificado: SPF `brevo-code:cdb0ba6a2afcc66ecd2dec927c68e1a9`, DKIM `brevo1`/`brevo2._domainkey`, DMARC `p=none`
+- [x] `replyTo` adicionado às funções SMTP (`send-welcome-email`, `send-monthly-report`, `delete-account`), default `suporte@pocketapps.pt`
+- [x] Deploy via MCP: `send-welcome-email` v44, `send-monthly-report` v6, `delete-account` v44, `report-unsubscribe` v2
+- [x] `docs/emails.md` criado (arquitetura, senders, DNS, funções, secrets, estado do Email Routing)
+- [ ] (utilizador) Definir secrets: `supabase secrets set SMTP_HOST=... SMTP_PORT=587 SMTP_USER=... SMTP_PASS=... SMTP_FROM=no-reply@pocketapps.pt SMTP_REPLY_TO=suporte@pocketapps.pt`
+- [x] Script `scripts/cloudflare-email-routing.ps1` criado (API REST Cloudflare: ativar routing, criar 4 destinos Gmail + rotas, validação final)
+- [ ] (utilizador) Configurar Cloudflare Email Routing: preencher token/IDs no script e executá-lo (4 destinos Gmail + rotas `geral@`, `suporte@`, `billing@`, `marketing@`) + confirmar os emails de verificação dos destinos
+

@@ -78,8 +78,9 @@ async function sendSmtpEmail(
   const user = Deno.env.get("SMTP_USER") || "";
   const pass = Deno.env.get("SMTP_PASS") || "";
   const from = Deno.env.get("SMTP_FROM") || "no-reply@pocketapps.pt";
+  const replyTo = Deno.env.get("SMTP_REPLY_TO") || "suporte@pocketapps.pt";
 
-  console.log(`[EMAIL] Enviar para ${to} via ${host}:${port} user="${user}" from="${from}"`);
+  console.log(`[EMAIL] Enviar para ${to} via ${host}:${port} user="${user}" from="${from}" replyTo="${replyTo}"`);
   if (!user || !pass) {
     console.error("[EMAIL] Credenciais em falta");
     return false;
@@ -94,7 +95,7 @@ async function sendSmtpEmail(
   });
 
   try {
-    await transporter.sendMail({ from, to, subject, html });
+    await transporter.sendMail({ from, to, replyTo, subject, html });
     console.log(`[EMAIL] Enviado com sucesso para ${to}`);
     return true;
   } catch (error) {

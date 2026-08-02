@@ -30,8 +30,13 @@ apps/
   pocket_fuel/          Vehicle & fuel costs (stub)
   pocket_shopping/      Shopping lists (stub)
 supabase/
-  functions/            Shared edge functions (send-welcome-email, delete-account)
+  functions/            Shared edge functions (send-welcome-email, send-monthly-report,
+                        delete-account, report-unsubscribe)
   schema.sql            Source of truth for the database schema
+scripts/
+  cloudflare-email-routing.ps1  Cloudflare Email Routing setup (destinations + rules)
+docs/
+  emails.md             Email infrastructure (Brevo relay, DNS, edge functions, secrets)
 .github/
   workflows/            CI pipeline
 ```
@@ -60,6 +65,11 @@ cd apps/pocket_expenses && flutter run
 ```
 
 Each app requires a Supabase project and a Google OAuth client — see the app READMEs.
+
+## Email
+
+Transactional email is sent through the Brevo SMTP relay via shared edge functions.
+See [`docs/emails.md`](docs/emails.md) for the full setup (senders, DNS, functions, secrets).
 
 ## CI
 

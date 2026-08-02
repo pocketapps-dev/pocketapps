@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/currency_provider.dart';
+import '../../config/theme.dart';
 import '../../config/theme_provider.dart';
 
 class PreferencesPage extends ConsumerWidget {
@@ -14,6 +15,7 @@ class PreferencesPage extends ConsumerWidget {
     final isDark = themeMode == ThemeMode.dark;
     final currency = ref.watch(currencyProvider);
     final currentCurrency = currencyByCode(currency);
+    final currentTheme = ref.watch(themeNameProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Preferências')),
@@ -30,6 +32,14 @@ class PreferencesPage extends ConsumerWidget {
                   value: isDark,
                   onChanged: (_) =>
                       ref.read(themeModeProvider.notifier).toggle(),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.palette_outlined),
+                  title: const Text('Cor do tema'),
+                  subtitle: Text(currentTheme),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showThemePicker(context, ref, currentTheme),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -69,6 +79,40 @@ class PreferencesPage extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showThemePicker(
+    BuildContext context,
+    WidgetRef ref,
+    String currentTheme,
+  ) {
+    final themes = AppTheme.availableThemes;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Escolhe o tema'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: themes
+              .map(
+                (theme) => ListTile(
+                  title: Text(theme),
+                  trailing: theme == currentTheme
+                      ? Icon(
+                          Icons.check,
+                          color: Theme.of(context).colorScheme.primary,
+                        )
+                      : null,
+                  onTap: () {
+                    ref.read(themeNameProvider.notifier).setTheme(theme);
+                    Navigator.pop(context);
+                  },
+                ),
+              )
+              .toList(),
+        ),
       ),
     );
   }

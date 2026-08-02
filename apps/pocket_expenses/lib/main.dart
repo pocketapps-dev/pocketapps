@@ -20,6 +20,7 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final darkMode = prefs.getBool(darkModePrefKey) ?? false;
   final currency = prefs.getString(currencyPrefKey) ?? 'EUR';
+  final themeName = prefs.getString(themeNamePrefKey) ?? 'Default';
 
   runApp(
     ProviderScope(
@@ -28,6 +29,9 @@ void main() async {
           () => ThemeModeNotifier(
             initial: darkMode ? ThemeMode.dark : ThemeMode.light,
           ),
+        ),
+        themeNameProvider.overrideWith(
+          () => ThemeNameNotifier(initial: themeName),
         ),
         currencyProvider.overrideWith(
           () => CurrencyNotifier(initial: currency),
@@ -45,11 +49,15 @@ class PocketExpensesApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final themeName = ref.watch(themeNameProvider);
+
+    final lightTheme = AppTheme.getTheme(themeName, Brightness.light);
+    final darkTheme = AppTheme.getTheme(themeName, Brightness.dark);
 
     return MaterialApp.router(
       title: PocketAuth.config.displayName,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: lightTheme,
+      darkTheme: darkTheme,
       themeMode: themeMode,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
