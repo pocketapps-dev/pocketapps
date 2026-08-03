@@ -63,6 +63,272 @@ begin
 end;
 $$ language plpgsql security definer;
 
+-- ============================================================
+-- 10. THEMES (catalog of available themes)
+-- ============================================================
+create table if not exists public.themes (
+  id          uuid primary key default gen_random_uuid(),
+  app_name    text not null check (app_name in ('expenses', 'fuel', 'shopping')),
+  theme_key   text not null,
+  name        text not null,
+  description text,
+  price_cents integer not null default 0,
+  seed_color  text not null,
+  is_premium  boolean not null default false,
+  is_paid     boolean not null default false,
+  is_active   boolean not null default true,
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now(),
+  unique(app_name, theme_key)
+);
+
+-- ============================================================
+-- 11. USER THEMES (which themes each user has access to)
+-- ============================================================
+create table if not exists public.user_themes (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  app_name     text not null check (app_name in ('expenses', 'fuel', 'shopping')),
+  theme_key    text not null,
+  source       text not null default 'purchase' check (source in ('purchase', 'premium', 'gift', 'activation_code')),
+  purchased_at timestamptz not null default now(),
+  created_at   timestamptz not null default now(),
+  unique(user_id, app_name, theme_key)
+);
+
+-- ============================================================
+-- 12. THEME PURCHASES (audit log for theme purchases)
+-- ============================================================
+create table if not exists public.theme_purchases (
+  id               uuid primary key default gen_random_uuid(),
+  user_id          uuid not null references auth.users(id) on delete cascade,
+  app_name         text not null check (app_name in ('expenses', 'fuel', 'shopping')),
+  theme_key        text not null,
+  amount_cents     integer not null,
+  payment_provider text,
+  payment_ref      text,
+  status           text not null default 'completed' check (status in ('pending', 'completed', 'refunded')),
+  created_at        timestamptz not null default now()
+);
+
+-- ============================================================
+-- THEME INDEXES
+-- ============================================================
+create index if not exists idx_themes_app on public.themes(app_name);
+create index if not exists idx_themes_app_active on public.themes(app_name) where is_active = true;
+create index if not exists idx_user_themes_user on public.user_themes(user_id);
+create index if not exists idx_user_themes_user_app on public.user_themes(user_id, app_name);
+create index if not exists idx_theme_purchases_user on public.theme_purchases(user_id);
+create index if not exists idx_theme_purchases_user_theme on public.theme_purchases(user_id, theme_key);
+create index if not exists idx_activation_codes_theme on public.activation_codes(theme_key) where theme_key is not null;
+
+-- ============================================================
+-- THEME RLS POLICIES
+-- ============================================================
+alter table public.themes enable row level security;
+alter table public.user_themes enable row level security;
+alter table public.theme_purchases enable row level security;
+
+create policy "Authenticated users can view themes"
+  on public.themes for select using (auth.role() = 'authenticated');
+create policy "Users can view own themes"
+  on public.user_themes for select using (auth.uid() = user_id);
+create policy "Users can view own theme purchases"
+  on public.theme_purchases for select using (auth.uid() = user_id);
+
+-- ============================================================
+-- SEED DATA: Themes catalog for PocketExpenses
+-- ============================================================
+insert into public.themes (app_name, theme_key, name, description, price_cents, seed_color, is_premium, is_paid, is_active, sort_order) values
+  ('expenses', 'default', 'Default',  'Tema padrão indigo.',           0,  '#6366F1', false, false, true, 1),
+  ('expenses', 'midnight','Midnight', 'Tema escuro elegante.',         0,  '#1E1B4B', true,  false, true, 2),
+  ('expenses', 'forest',  'Forest',   'Tema verde natureza.',          0,  '#22C55E', true,  false, true, 3),
+  ('expenses', 'sunset',  'Sunset',   'Tema quente e vibrante.',       0,  '#F97316', true,  false, true, 4),
+  ('expenses', 'ocean',   'Ocean',    'Tema azul oceano.',             99, '#0EA5E9', false, true,  true, 5),
+  ('expenses', 'autumn',  'Autumn',   'Tema outono quente.',           99, '#EA580C', false, true,  true, 6),
+  ('expenses', 'galaxy',  'Galaxy',   'Tema roxo galáxia.',            99, '#8B5CF6', false, true,  true, 7)
+on conflict (app_name, theme_key) do nothing;
+
+-- ============================================================
+-- THEME HELPER FUNCTIONS
+-- ============================================================
+
+-- Get all themes available to the current user
+create or replace function public.get_user_themes(p_app_name text)
+returns jsonb as $$
+declare
+  v_user_id uuid;
+  v_has_premium boolean;
+  v_result jsonb;
+begin
+  v_user_id := auth.uid();
+  if v_user_id is null then
+    return jsonb_build_object('error', 'Not authenticated');
+  end if;
+
+  select exists(
+    select 1 from public.subscriptions
+    where user_id = v_user_id
+      and app_name = p_app_name
+      and plan in ('premium', 'founder')
+      and status = 'active'
+      and (ends_at is null or ends_at > now())
+  ) into v_has_premium;
+
+  select jsonb_agg(
+    jsonb_build_object(
+      'theme_key', t.theme_key,
+      'name', t.name,
+      'description', t.description,
+      'price_cents', t.price_cents,
+      'seed_color', t.seed_color,
+      'is_premium', t.is_premium,
+      'is_paid', t.is_paid,
+      'sort_order', t.sort_order,
+      'available',
+        case
+          when not t.is_premium and not t.is_paid then true
+          when t.is_premium and v_has_premium then true
+          when t.is_paid and exists(
+            select 1 from public.user_themes ut
+            where ut.user_id = v_user_id
+              and ut.app_name = p_app_name
+              and ut.theme_key = t.theme_key
+          ) then true
+          else false
+        end,
+      'purchased',
+        exists(
+          select 1 from public.user_themes ut
+          where ut.user_id = v_user_id
+            and ut.app_name = p_app_name
+            and ut.theme_key = t.theme_key
+        )
+    )
+    order by t.sort_order
+  )
+  into v_result
+  from public.themes t
+  where t.app_name = p_app_name
+    and t.is_active = true;
+
+  return coalesce(v_result, '[]'::jsonb);
+end;
+$$ language plpgsql security definer;
+
+revoke execute on function public.get_user_themes(text) from public;
+grant execute on function public.get_user_themes(text) to authenticated;
+
+-- Validate a theme activation code and unlock the theme for the user
+create or replace function public.validate_theme_activation_code(
+  p_code text,
+  p_app_name text
+)
+returns jsonb as $$
+declare
+  v_code public.activation_codes;
+  v_user_id uuid;
+  v_theme public.themes;
+begin
+  v_user_id := auth.uid();
+  if v_user_id is null then
+    return jsonb_build_object('valid', false, 'error', 'Not authenticated');
+  end if;
+
+  select * into v_code
+  from public.activation_codes
+  where code = upper(trim(p_code))
+    and app_name = p_app_name
+    and is_active = true
+    and theme_key is not null;
+
+  if not found then
+    return jsonb_build_object('valid', false, 'error', 'Código inválido');
+  end if;
+
+  if v_code.expires_at is not null and v_code.expires_at < now() then
+    return jsonb_build_object('valid', false, 'error', 'Código expirado');
+  end if;
+
+  if v_code.use_count >= v_code.max_uses then
+    return jsonb_build_object('valid', false, 'error', 'Código totalmente utilizado');
+  end if;
+
+  select * into v_theme
+  from public.themes
+  where app_name = p_app_name
+    and theme_key = v_code.theme_key
+    and is_active = true;
+
+  if not found then
+    return jsonb_build_object('valid', false, 'error', 'Tema não encontrado');
+  end if;
+
+  insert into public.user_themes (user_id, app_name, theme_key, source)
+  values (v_user_id, p_app_name, v_code.theme_key, 'activation_code')
+  on conflict (user_id, app_name, theme_key) do nothing;
+
+  insert into public.theme_purchases (user_id, app_name, theme_key, amount_cents, payment_provider, payment_ref, status)
+  values (v_user_id, p_app_name, v_code.theme_key, 0, 'activation_code', v_code.code, 'completed');
+
+  update public.activation_codes
+  set use_count = use_count + 1, used_by = v_user_id, used_at = now(),
+      is_active = case when use_count + 1 >= max_uses then false else true end
+  where id = v_code.id;
+
+  return jsonb_build_object(
+    'valid', true,
+    'theme_key', v_code.theme_key,
+    'theme_name', v_theme.name
+  );
+end;
+$$ language plpgsql security definer;
+
+revoke execute on function public.validate_theme_activation_code(text, text) from public;
+grant execute on function public.validate_theme_activation_code(text, text) to authenticated;
+
+-- Grant a theme to a user (called by Edge Functions with service_role)
+create or replace function public.grant_theme_to_user(
+  p_user_id uuid,
+  p_app_name text,
+  p_theme_key text,
+  p_source text default 'purchase',
+  p_payment_provider text default 'stripe',
+  p_payment_ref text,
+  p_amount_cents integer default 99
+)
+returns jsonb as $$
+declare
+  v_theme public.themes;
+begin
+  select * into v_theme
+  from public.themes
+  where app_name = p_app_name
+    and theme_key = p_theme_key
+    and is_active = true;
+
+  if not found then
+    return jsonb_build_object('success', false, 'error', 'Tema não encontrado');
+  end if;
+
+  insert into public.user_themes (user_id, app_name, theme_key, source)
+  values (p_user_id, p_app_name, p_theme_key, p_source)
+  on conflict (user_id, app_name, theme_key) do nothing;
+
+  insert into public.theme_purchases (user_id, app_name, theme_key, amount_cents, payment_provider, payment_ref, status)
+  values (p_user_id, p_app_name, p_theme_key, p_amount_cents, p_payment_provider, p_payment_ref, 'completed');
+
+  return jsonb_build_object(
+    'success', true,
+    'theme_key', p_theme_key,
+    'theme_name', v_theme.name
+  );
+end;
+$$ language plpgsql security definer;
+
+revoke execute on function public.grant_theme_to_user(uuid, text, text, text, text, text, integer) from public;
+grant execute on function public.grant_theme_to_user(uuid, text, text, text, text, text, integer) to service_role;
+
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
@@ -188,7 +454,11 @@ create table public.activation_codes (
   id                uuid primary key default uuid_generate_v4(),
   code              text not null unique,
   app_name          text not null check (app_name in ('expenses', 'fuel', 'shopping')),
-  plan              text not null default 'premium' check (plan in ('premium', 'founder')),
+  plan              text default 'premium' check (
+    (theme_key is not null) or
+    (plan is not null and plan in ('premium', 'founder'))
+  ),
+  theme_key         text,
   duration_months   integer not null default 12,
   max_uses          integer not null default 1,
   use_count         integer not null default 0,
@@ -209,6 +479,7 @@ create table public.report_preferences (
   email_reports_enabled   boolean not null default false,
   report_day              integer not null default 28 check (report_day between 1 and 28),
   report_hour             integer not null default 9 check (report_hour between 0 and 23),
+  report_type             text not null default 'detailed' check (report_type in ('simple', 'detailed')),
   include_categories      boolean not null default true,
   include_charts          boolean not null default true,
   unsubscribe_token       uuid default gen_random_uuid(),
@@ -606,7 +877,8 @@ begin
   from public.activation_codes
   where code = upper(trim(p_code))
     and app_name = p_app_name
-    and is_active = true;
+    and is_active = true
+    and theme_key is null;
 
   if not found then
     return jsonb_build_object('valid', false, 'error', 'Código inválido');

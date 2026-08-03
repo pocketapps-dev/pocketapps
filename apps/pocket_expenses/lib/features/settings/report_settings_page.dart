@@ -14,6 +14,7 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
   bool _enabled = false;
   int _day = 1;
   int _hour = 9;
+  String _reportType = 'detailed';
   bool _includeCategories = true;
   bool _includeCharts = true;
   bool _isSaving = false;
@@ -33,6 +34,7 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
         _enabled = prefs['email_reports_enabled'] as bool? ?? false;
         _day = prefs['report_day'] as int? ?? 1;
         _hour = prefs['report_hour'] as int? ?? 9;
+        _reportType = prefs['report_type'] as String? ?? 'detailed';
         _includeCategories = prefs['include_categories'] as bool? ?? true;
         _includeCharts = prefs['include_charts'] as bool? ?? true;
       });
@@ -47,6 +49,7 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
           reportHour: _hour,
           includeCategories: _includeCategories,
           includeCharts: _includeCharts,
+          reportType: _reportType,
         );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,7 +64,7 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
 
   Future<void> _sendTest() async {
     setState(() => _isSendingTest = true);
-    final ok = await ref.read(reportActionsProvider).sendTest();
+    final ok = await ref.read(reportActionsProvider).sendTest(reportType: _reportType);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -115,6 +118,22 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
                       ? () async {
                           final selected = await _pickHour();
                           if (selected != null) setState(() => _hour = selected);
+                        }
+                      : null,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.article_outlined),
+                  title: const Text('Tipo de relatório'),
+                  subtitle: Text(
+                    _reportType == 'simple'
+                        ? 'Simples · só o resumo'
+                        : 'Detalhado · com categorias e gráficos',
+                  ),
+                  onTap: _enabled
+                      ? () async {
+                          final selected = await _pickReportType();
+                          if (selected != null) setState(() => _reportType = selected);
                         }
                       : null,
                 ),
@@ -197,6 +216,25 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
               onPressed: () => Navigator.pop(context, h),
               child: Text('${h.toString().padLeft(2, '0')}:00'),
             ),
+        ],
+      ),
+    );
+  }
+
+  Future<String?> _pickReportType() async {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Tipo de relatório'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'simple'),
+            child: const Text('Simples · só o resumo'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'detailed'),
+            child: const Text('Detalhado · com categorias e gráficos'),
+          ),
         ],
       ),
     );

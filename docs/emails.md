@@ -42,10 +42,10 @@ Edge Function (Supabase)  ── SMTP (nodemailer) ──►  Brevo Relay (smtp-
 
 | Função | Versão deployed | verify_jwt | Import map | Emails |
 | --- | --- | --- | --- | --- |
-| `send-welcome-email` | 44 | true | `deno.json` | Boas-vindas por app (`expenses`/`fuel`/`shopping` via `APP_CONFIG`) |
-| `send-monthly-report` | 6 | true | `deno.json` | Relatório mensal |
-| `delete-account` | 44 | true | `deno.json` | Confirmação de eliminação de conta |
-| `report-unsubscribe` | 2 | false | — | Sem SMTP (não envia email) |
+| `send-welcome-email` | 46 | true | `deno.json` | Boas-vindas por app (`expenses`/`fuel`/`shopping` via `APP_CONFIG`) |
+| `send-monthly-report` | 9 | true | `deno.json` | Relatório mensal (simple/detailed) |
+| `delete-account` | 46 | true | `deno.json` | Confirmação de eliminação de conta |
+| `report-unsubscribe` | 4 | false | — | Sem SMTP (não envia email) |
 
 ### Reply-to
 
@@ -71,6 +71,38 @@ supabase secrets set \
 
 Defaults no código: host `smtp-relay.brevo.com`, porta `587`, `SMTP_FROM=no-reply@pocketapps.pt`, `SMTP_REPLY_TO=suporte@pocketapps.pt`.
 
+## Relatório mensal — tipos (simple / detailed)
+
+O `send-monthly-report` suporta dois formatos, controlados pela coluna `report_preferences.report_type`:
+
+- `simple` — cabeçalho + linha de estatísticas (Total/Recorrentes/Únicas/Despesas) + CTA; sem categorias nem gráficos.
+- `detailed` (padrão) — além das estatísticas, inclui a quebra por categoria (barras HTML) e, se `include_charts`, os indicadores de total do mês e categorias usadas.
+
+Precedência na função: `body.report_type` → `report_preferences.report_type` → `'detailed'`. A preferência é definida na app (Flutter) nas definições do relatório e gravada com `report_type` no upsert de `report_preferences` (o `report_provider.dart` usa `'detailed'` como fallback).
+
+A migração correspondente (`supabase/migrations/002_report_type.sql`) aplica a coluna com `add column if not exists`, mantendo o valor existente (`detailed`) para quem já tinha preferências.
+
+## Agendar o relatório mensal (pg_cron)
+
+O `send-monthly-report` em modo **batch** (sem `Authorization`) lê `report_preferences` e envia a todos os utilizadores com `email_reports_enabled=true` cujo `report_day`/`report_hour` correspondam ao momento da invocação. O job só envia para quem deve, pelo que basta correr de hora em hora.
+
+**Aplicado** (2026-08-03) no projeto `vlbhnlzqixmxtlpqsggd`: job `monthly-report-hourly` (jobid 2, schedule `0 * * * *`, active), com a `service_role` guardada no Vault (`service_role_key`). SQL de referência:
+
+```sql
+select cron.schedule('monthly-report-hourly', '0 * * * *', $net$
+  select net.http_post(
+    url := 'https://<PROJECT_REF>.supabase.co/functions/v1/send-monthly-report',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer <SERVICE_ROLE_KEY>',
+      'Content-Type', 'application/json'
+    ),
+    body := '{}'
+  )
+$net$);
+```
+
+Requisitos: extensão `pg_net` (e `pg_cron`) ativas no Supabase; `<SERVICE_ROLE_KEY>` em secret no Postgres (ex.: via `supabase secrets` não aplicável — usar `ALTER ROLE`/Dashboard).
+
 ## Cloudflare Email Routing
 
 Objetivo: encaminhar `geral@`, `suporte@`, `billing@`, `marketing@` para Gmail.
@@ -78,6 +110,10 @@ Objetivo: encaminhar `geral@`, `suporte@`, `billing@`, `marketing@` para Gmail.
 A configuração é feita pelo script [`scripts/cloudflare-email-routing.ps1`](../scripts/cloudflare-email-routing.ps1)
 (API REST do Cloudflare) porque as ferramentas MCP do Cloudflare não expõem a zona/Email Routing
 (a listagem de zonas devolveu vazia).
+
+> **Estado live verificado por DNS (2026-08-03):** o routing está ativo — MX `route1/2/3.mx.cloudflare.net`
+> e SPF com `include:_spf.mx.cloudflare.net` + `include:spf.brevo.com`. Falta apenas confirmar a
+> receção dos emails de verificação do Cloudflare nos destinos Gmail.
 
 ### Destinos e rotas
 

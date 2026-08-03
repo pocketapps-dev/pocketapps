@@ -72,6 +72,7 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
   let total = 0;
   let recurring = 0;
   let unique = 0;
+  let count = 0;
   const byCategory = new Map<string, number>();
 
   const start = new Date(monthStart);
@@ -106,6 +107,7 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
     if (!occursInMonth(e)) continue;
     const amt = Number(e.amount) || 0;
     total += amt;
+    count++;
     if (e.type === "recurring") recurring += amt;
     else unique += amt;
     const cat = catById.get(e.category_id);
@@ -114,43 +116,33 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
   }
 
   const sortedCat = [...byCategory.entries()].sort((a, b) => b[1] - a[1]);
-  return { total, recurring, unique, byCategory: sortedCat };
+  return { total, recurring, unique, count, byCategory: sortedCat };
 }
 
-function buildReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, unsubscribeUrl: string): string {
-  const label = monthLabel(monthStart);
-  const max = data.byCategory.length ? data.byCategory[0][1] : 1;
+function statsRowsHtml(data: any): string {
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
+    <tr>
+      <td style="width:25%; text-align:center; background-color:#f9fafb; border-radius:8px; padding:12px 4px;">
+        <div style="font-size:20px; font-weight:700; color:#111827;">${money(data.total)}</div>
+        <div style="color:#6b7280; font-size:12px; margin-top:4px;">Total</div>
+      </td>
+      <td style="width:25%; text-align:center; padding:12px 4px;">
+        <div style="font-size:20px; font-weight:700; color:#111827;">${money(data.recurring)}</div>
+        <div style="color:#6b7280; font-size:12px; margin-top:4px;">Recorrentes</div>
+      </td>
+      <td style="width:25%; text-align:center; padding:12px 4px;">
+        <div style="font-size:20px; font-weight:700; color:#111827;">${money(data.unique)}</div>
+        <div style="color:#6b7280; font-size:12px; margin-top:4px;">Únicas</div>
+      </td>
+      <td style="width:25%; text-align:center; padding:12px 4px;">
+        <div style="font-size:20px; font-weight:700; color:#111827;">${data.count}</div>
+        <div style="color:#6b7280; font-size:12px; margin-top:4px;">Despesas</div>
+      </td>
+    </tr>
+  </table>`;
+}
 
-  const categoriesHtml = includeCategories
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
-       ${data.byCategory
-         .map(([name, amt]: [string, number]) => {
-           const pct = max > 0 ? Math.round((amt / max) * 100) : 0;
-           return `<tr>
-             <td style="padding:6px 0; color:#374151; font-size:14px; width:45%;">${name}</td>
-             <td style="width:35%; padding:6px 0;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="background-color:#e5e7eb; border-radius:4px;"><table width="${pct}%" cellpadding="0" cellspacing="0"><tr><td style="background-color:${APP.color}; height:8px; border-radius:4px;"></td></tr></table></td></tr></table></td>
-             <td style="padding:6px 0; text-align:right; color:#111827; font-size:14px; font-weight:600;">${money(amt)}</td>
-           </tr>`;
-         })
-         .join("")}
-     </table>`
-    : "";
-
-  const chartsHtml = includeCharts
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
-        <tr>
-          <td style="width:50%; text-align:center;">
-            <div style="font-size:24px; font-weight:700; color:${APP.color};">${money(data.total)}</div>
-            <div style="color:#6b7280; font-size:12px; margin-top:4px;">Total do mês</div>
-          </td>
-          <td style="width:50%; text-align:center;">
-            <div style="font-size:24px; font-weight:700; color:#10B981;">${data.byCategory.length}</div>
-            <div style="color:#6b7280; font-size:12px; margin-top:4px;">Categorias usadas</div>
-          </td>
-        </tr>
-      </table>`
-    : "";
-
+function buildShellHtml(title: string, subtitle: string, bodyHtml: string, unsubscribeUrl: string): string {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -162,11 +154,9 @@ function buildReportHtml(userName: string, data: any, monthStart: Date, includeC
           <h1 style="color:#ffffff; margin:0; font-size:26px;">${APP.name}</h1>
         </td></tr>
         <tr><td style="padding:40px 30px;">
-          <h2 style="color:#111827; margin:0 0 8px 0; font-size:20px;">Relatório de ${label}</h2>
-          <p style="color:#6b7280; margin:0 0 24px 0; font-size:15px;">Olá ${userName}, aqui está o resumo das tuas despesas.</p>
-          ${chartsHtml}
-          <h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Por categoria</h3>
-          ${categoriesHtml}
+          <h2 style="color:#111827; margin:0 0 8px 0; font-size:20px;">${title}</h2>
+          <p style="color:#6b7280; margin:0 0 8px 0; font-size:15px;">${subtitle}</p>
+          ${bodyHtml}
           <table cellpadding="0" cellspacing="0" style="margin:24px auto 0 auto;">
             <tr>
               <td style="background-color:${APP.color}; border-radius:8px; padding:14px 32px;">
@@ -188,11 +178,64 @@ function buildReportHtml(userName: string, data: any, monthStart: Date, includeC
 </html>`;
 }
 
+function buildSimpleReportHtml(userName: string, data: any, monthStart: Date, unsubscribeUrl: string): string {
+  const label = monthLabel(monthStart);
+  return buildShellHtml(
+    `Relatório de ${label}`,
+    `Olá ${userName}, aqui está o resumo das tuas despesas.`,
+    `<h3 style="color:#111827; font-size:16px; margin:24px 0 0 0;">Visão geral</h3>${statsRowsHtml(data)}`,
+    unsubscribeUrl,
+  );
+}
+
+function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, unsubscribeUrl: string): string {
+  const label = monthLabel(monthStart);
+  const max = data.byCategory.length ? data.byCategory[0][1] : 1;
+
+  const categoriesHtml = includeCategories
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+       ${data.byCategory
+         .map(([name, amt]: [string, number]) => {
+           const pct = max > 0 ? Math.round((amt / max) * 100) : 0;
+           return `<tr>
+             <td style="padding:6px 0; color:#374151; font-size:14px; width:45%;">${name}</td>
+             <td style="width:35%; padding:6px 0;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="background-color:#e5e7eb; border-radius:4px;"><table width="${pct}%" cellpadding="0" cellspacing="0"><tr><td style="background-color:${APP.color}; height:8px; border-radius:4px;"></td></tr></table></td></tr></table></td>
+             <td style="padding:6px 0; text-align:right; color:#111827; font-size:14px; font-weight:600;">${money(amt)}</td>
+           </tr>`;
+         })
+         .join("")}
+     </table>`
+    : "";
+
+  const chartsHtml = includeCharts
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0 0;">
+        <tr>
+          <td style="width:50%; text-align:center;">
+            <div style="font-size:24px; font-weight:700; color:${APP.color};">${money(data.total)}</div>
+            <div style="color:#6b7280; font-size:12px; margin-top:4px;">Total do mês</div>
+          </td>
+          <td style="width:50%; text-align:center;">
+            <div style="font-size:24px; font-weight:700; color:#10B981;">${data.byCategory.length}</div>
+            <div style="color:#6b7280; font-size:12px; margin-top:4px;">Categorias usadas</div>
+          </td>
+        </tr>
+      </table>`
+    : "";
+
+  const bodyHtml = `${chartsHtml}${statsRowsHtml(data)}<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Por categoria</h3>${categoriesHtml}`;
+  return buildShellHtml(
+    `Relatório de ${label}`,
+    `Olá ${userName}, aqui está o resumo das tuas despesas.`,
+    bodyHtml,
+    unsubscribeUrl,
+  );
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
     const authHeader = req.headers.get("Authorization");
 
     const supabase = createClient(
@@ -218,7 +261,7 @@ serve(async (req: Request) => {
       const hour = now.getHours();
       const { data: prefs } = await supabase
         .from("report_preferences")
-        .select("user_id, report_day, report_hour, include_categories, include_charts, app_name, unsubscribe_token")
+        .select("user_id, report_day, report_hour, include_categories, include_charts, app_name, report_type, unsubscribe_token")
         .eq("email_reports_enabled", true)
         .eq("report_day", day)
         .eq("report_hour", hour);
@@ -245,7 +288,7 @@ serve(async (req: Request) => {
       let prefsRow: any = {};
       const { data: prefsData } = await supabase
         .from("report_preferences")
-        .select("include_categories, include_charts, app_name, unsubscribe_token")
+        .select("include_categories, include_charts, app_name, report_type, unsubscribe_token")
         .eq("user_id", t.user_id)
         .maybeSingle();
       prefsRow = prefsData || {};
@@ -254,6 +297,7 @@ serve(async (req: Request) => {
       const data = await fetchReportData(supabase, t.user_id, appName, monthStart.toISOString(), monthEnd.toISOString());
       const includeCategories = prefsRow.include_categories !== false;
       const includeCharts = prefsRow.include_charts !== false;
+      const reportType = body.report_type || prefsRow.report_type || "detailed";
       const token = prefsRow.unsubscribe_token;
       const baseUrl = Deno.env.get("SUPABASE_URL") ?? "";
       const unsubscribeUrl = token
@@ -262,9 +306,11 @@ serve(async (req: Request) => {
 
       const userName = t.email.split("@")[0];
       const subject = `O teu relatório de ${monthLabel(monthStart)} 📊`;
-      const html = buildReportHtml(userName, data, monthStart, includeCategories, includeCharts, unsubscribeUrl);
+      const html = reportType === "simple"
+        ? buildSimpleReportHtml(userName, data, monthStart, unsubscribeUrl)
+        : buildDetailedReportHtml(userName, data, monthStart, includeCategories, includeCharts, unsubscribeUrl);
       const ok = await sendSmtpEmail(t.email, subject, html);
-      results.push(`${t.user_id}:${ok ? "sent" : "failed"}`);
+      results.push(`${t.user_id}:${reportType}:${ok ? "sent" : "failed"}`);
     }
 
     return new Response(JSON.stringify({ success: true, results }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });

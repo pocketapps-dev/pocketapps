@@ -17,6 +17,7 @@ final reportPreferencesProvider = FutureProvider<Map<String, dynamic>>((ref) asy
         'report_hour': 9,
         'include_categories': true,
         'include_charts': true,
+        'report_type': 'detailed',
       };
 });
 
@@ -37,6 +38,7 @@ class ReportActions {
     int? reportHour,
     bool includeCategories = true,
     bool includeCharts = true,
+    String reportType = 'detailed',
   }) async {
     await _service.savePreferences(
       emailReportsEnabled: emailReportsEnabled,
@@ -44,9 +46,11 @@ class ReportActions {
       reportHour: reportHour,
       includeCategories: includeCategories,
       includeCharts: includeCharts,
+      reportType: reportType,
     );
     _ref.invalidate(reportPreferencesProvider);
   }
 
-  Future<bool> sendTest() => _service.sendTestReport();
+  Future<bool> sendTest({String? reportType}) =>
+      _service.sendTestReport(reportType: reportType);
 }

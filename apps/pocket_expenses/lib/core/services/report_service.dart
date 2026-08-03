@@ -23,6 +23,7 @@ class ReportService {
     int? reportHour,
     bool includeCategories = true,
     bool includeCharts = true,
+    String reportType = 'detailed',
   }) async {
     await _client.from('report_preferences').upsert(
       {
@@ -33,16 +34,17 @@ class ReportService {
         'report_hour': ?reportHour,
         'include_categories': includeCategories,
         'include_charts': includeCharts,
+        'report_type': reportType,
       },
       onConflict: 'user_id,app_name',
     );
   }
 
-  Future<bool> sendTestReport() async {
+  Future<bool> sendTestReport({String? reportType}) async {
     try {
       await _client.functions.invoke(
         'send-monthly-report',
-        body: {'test': true},
+        body: {'test': true, 'report_type': ?reportType},
       );
       return true;
     } catch (_) {
