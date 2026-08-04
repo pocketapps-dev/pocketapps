@@ -1,7 +1,7 @@
 # PocketApps — Estado Global do Projeto
 
 > Resumo completo do monorepo: o que existe, o que está em progresso e o que falta.
-> Atualizado em 2026-08-03.
+> Atualizado em 2026-08-04.
 
 ## 1. Visão geral
 
@@ -28,11 +28,12 @@ supabase/
   migrations/             → 001_themes.sql, 002_report_type.sql
   functions/              → 5 Edge Functions (Deno)
 docs/
-  emails.md               → Modelos/conteúdo de emails transacionais
-  monetizacao.md          → Estratégia de monetização (planos, fases, sprints)
-  monetizacao-status.md   → Estado operacional da monetização (8 passos)
+  auth.md                 → Autenticação (Supabase Auth + Google, setup no dashboard)
+  backend.md              → Backend Supabase: schema, RPCs, edge functions, email transacional
+  site.md                 → Site institucional (pocketapps.github.io)
+  monetizacao-stripe.md   → Monetização/Stripe: planos, fases, estado (8 passos)
   legal/                  → termos-de-servico.md, politica-de-privacidade.md, play-store-data-safety.md
-  project-status.md       → Este documento
+  project-status.md       → Este documento (índice global)
 pocketapps.github.io/     → Repo separado do site (git-ignored no main)
 .github/workflows/        → build-expenses.yml, build-fuel.yml, build-shopping.yml
 scripts/
@@ -51,6 +52,7 @@ TODO.md                   → Tarefas A/B/C concluídas
 **pocket_expenses** (app principal):
 - Auth Supabase (email/password + Google) com fluxo completo (callback, reset password, mudar email/password, apagar conta).
 - Gestão de despesas recorrentes/únicas, categorias, resumo mensal, calendário, temas.
+- **Loja de temas (2026-08-04)**: página `/settings/themes` alimentada pelo RPC `get_user_themes` — secções Grátis (Default) / Premium (Midnight, Forest, Sunset) / Pagos (Ocean, Autumn, Galaxy 0,99€, compra no site `themes.html`) + ativação de código de tema.
 - Relatórios mensais por email (`report_settings_page` + `report_provider`/`report_service`).
 - Plataformas de destino: Android (APK gerado em CI). `version: 1.0.0+1`.
 
@@ -81,13 +83,19 @@ TODO.md                   → Tarefas A/B/C concluídas
 
 ### Email transacional
 - Relay SMTP: **`smtp-relay.brevo.com`** (Brevo), from padrão `no-reply@pocketapps.pt`.
-- `docs/emails.md` documenta templates/parâmetros.
+- Documentado em [`docs/backend.md`](backend.md) (secção "Email transacional").
+- **Supabase Auth custom SMTP** ✅ configurado e **verificado com envio real** (2026-08-03): magic link/OTP do site chega à inbox. Causa do problema anterior: `smtp_user` errado (email da conta em vez do login SMTP do Brevo).
 
 ## 5. Site (`pocketapps.github.io` — repo separado)
 
 Páginas: `index.html`, `apps.html`, `features.html`, `pricing.html`, `themes.html`, `contact.html`, `ativar.html`, `terms.html`, `privacy.html` + `style.css` (27 KB) + `layout.js`. Diretório `apk/` aloja o APK (atualizado automaticamente por CI).
 
-Estado git do site: `pricing.html`, `style.css` e `themes.html` têm **alterações por commitar** (preços/links da monetização).
+Auth no site (2026-08-03, tudo publicado e verificado no ar):
+- **Homepage (`index.html`)**: login/signup por email/palavra-passe + Google, espelhando o auth do app (RPCs partilhados, metadados de consentimento, confirmação por email). Depois de entrar fica na homepage com a barra de sessão.
+- **`themes.html` / `pricing.html`**: magic link funcional — bug `SyntaxError: Identifier 'supabase' has already been declared` (conflito com o global do UMD do CDN) corrigido com o rename `supabaseClient` (commit `d6f9839`).
+- Login/signup na homepage: commit `8dfb41e`.
+
+Estado git do site: commits `d6f9839` (fix magic link) e `8dfb41e` (login/signup homepage) já pushados.
 
 ## 6. CI/CD (`.github/workflows`)
 
@@ -101,37 +109,37 @@ Pipeline funcionando (commits recentes `dce2886`, `75d7617`).
 
 ## 7. Monetização — resumo executivo
 
-Documento completo: `docs/monetizacao-status.md`.
+Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 
 - **Planos**: Free · Premium 1,49€/mês · Premium Anual 14,99€/ano · Founder 29,99€ (one-time, bundle 3 apps). Temas à la carte 0,99€.
 - **Passo 1 (temas/loja)** ✅ feito (migration + webhook) — ver acima.
-- **Passos 2–3** ⏳ ação manual no dashboard Supabase: ativar email provider + confirm email; configurar redirects `pt.pocketapps.pocket{expenses,fuel,shopping}://auth-callback`; Site URL `https://pocketapps.github.io`.
+- **Passos 2–3** ✅: email provider + confirm email + **custom SMTP corrigido** (OTP chega à inbox); redirects e **Site URL** `https://pocketapps.pt` corrigidos (2026-08-03). Magic link do site a funcionar após fix do `SyntaxError` (rename `supabaseClient`, commit `d6f9839`); homepage com login/signup email/password + Google (commit `8dfb41e`).
 - **Passos 4–8** 🔴 **bloqueados**: dashboard da Stripe em baixo (erro do lado da Stripe) — impede criar 6 Payment Links, deploy do `stripe-webhook`, colocar links reais e substituir botões mock.
 - **Botões mock**: `buy.stripe.com/TODO_*` → decisão de 2026-08: mostrar **"Em breve"** desativado enquanto não houver link real (`.btn-buy` em `style.css`, `pricing.html`, `themes.html`).
 
-## 8. O que está em progresso (WIP não commitado)
+## 8. WIP neste commit (2026-08-04)
 
-Em `main` (repo principal):
-- `report_provider.dart`, `report_service.dart`, `report_settings_page.dart` — feature *tipo de relatório* (simple/detailed).
-- `supabase/schema.sql` (+276 linhas) — temas/loja + `report_type`.
-- `supabase/functions/send-monthly-report/index.ts` — suporte a `report_type`.
-- `docs/emails.md` — documentação de emails atualizada.
+- **Loja de temas na app** (PocketExpenses): `core/models/theme_info.dart`, `core/services/theme_store_service.dart`, `core/providers/theme_store_provider.dart`, `features/settings/themes_page.dart` (novos); rota `/settings/themes` + entry em `preferences_page.dart`; seeds `autumn`/`galaxy` + `getThemeFromSeed` em `config/theme.dart`.
+- Docs: reorg concluída (`docs/auth.md`, `docs/backend.md`, `docs/site.md`, `docs/monetizacao-stripe.md`; removidos `docs/emails.md`, `docs/monetizacao.md`, `docs/monetizacao-status.md`), secção "Loja de temas (app)" em `backend.md`, nota em `site.md`, `TODO.md` Tarefa F, `README.md` aponta para os novos docs.
 
-Ficheiros untracked relevantes: `supabase/functions/stripe-webhook/`, `supabase/migrations/` (ambos já aplicados no remoto), `docs/monetizacao-status.md`, `devtools_options.yaml` (local — não commitar), e **`index.ts` órfão na raiz** (só `// placeholder` — provavelmente para remover).
+`devtools_options.yaml` (local) — não commitar. `supabase/migrations/` e `supabase/functions/stripe-webhook/` já aplicados no remoto (commit `a6c2740`).
 
 ## 9. O que falta / próximo
 
 | # | Item | Estado |
 |---|---|---|
 | 1 | Migration `002_report_type.sql` aplicar no remoto | ✅ feito (verificada) |
-| 2 | Dashboard Supabase: email provider + confirm email | ⏳ manual |
-| 3 | Dashboard Supabase: redirect URLs + Site URL | ⏳ manual |
+| 2 | Dashboard Supabase: email provider + confirm email + **custom SMTP** | ✅ feito (SMTP corrigido e verificado) |
+| 3 | Dashboard Supabase: redirect URLs + Site URL | ✅ feito — allowlist + Site URL `https://pocketapps.pt` (2026-08-03) |
 | 4–8 | Stripe: Payment Links + deploy webhook + links reais + botões | 🔴 bloqueado (Stripe em baixo) |
 | 9 | Botões mock → "Em breve" (decisão tomada) | ⏳ falta aplicar no site |
-| 10 | Commit do WIP atual (relatório tipo + temas no schema) | 🔄 este commit |
-| 11 | Remover `index.ts` órfão da raiz | ⏳ |
+| 10 | Commit do WIP (relatório tipo + temas no schema + reorg de docs) | ✅ feito (commits `a6c2740`, `9253aba`, este) |
+| 11 | Remover `index.ts` órfão da raiz | ✅ removido localmente (sem commit) |
 | 12 | Apps Fuel e Shopping: passar de stub para implementação | 🟡 futuro |
-| 13 | Fases de monetização no produto (anúncios, gates, widgets, wizard) | 🟡 ver `monetizacao.md` |
+| 13 | Fases de monetização no produto (anúncios, gates, widgets, wizard) | 🟡 ver `monetizacao-stripe.md` |
+| 14 | Site: magic link não enviava (SyntaxError do CDN) + allowlist `/themes` `/pricing` | ✅ corrigido (2026-08-03, commit `d6f9839`) |
+| 15 | Site: login/signup por email/password + Google na homepage | ✅ feito (2026-08-03, commit `8dfb41e`) |
+| 16 | App: loja de temas (`/settings/themes` via `get_user_themes`) | ✅ feito (2026-08-04, este commit) |
 
 ## 10. Notas de manutenção
 

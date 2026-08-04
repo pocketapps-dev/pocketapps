@@ -79,23 +79,31 @@ class AppTheme {
       case 'forest':
         return const Color(0xFF22C55E);
       case 'purple':
+      case 'galaxy':
         return const Color(0xFF8B5CF6);
       case 'sunset':
         return const Color(0xFFF97316);
       case 'midnight':
         return const Color(0xFF1E1B4B);
+      case 'autumn':
+        return const Color(0xFFEA580C);
       default:
         return primaryColor;
     }
   }
 
+  static ThemeData getThemeFromSeed(Color seedColor, Brightness brightness) {
+    return _baseTheme(brightness, seedColor);
+  }
+
   static List<String> get availableThemes => [
     'Default',
-    'Ocean',
-    'Forest',
-    'Purple',
-    'Sunset',
     'Midnight',
+    'Forest',
+    'Sunset',
+    'Ocean',
+    'Autumn',
+    'Galaxy',
   ];
 
   static ThemeData get lightTheme => getTheme('default', Brightness.light);

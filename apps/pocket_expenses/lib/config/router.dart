@@ -11,6 +11,7 @@ import '../features/settings/about_page.dart';
 import '../features/settings/export_data_page.dart';
 import '../features/settings/plans_page.dart';
 import '../features/settings/report_settings_page.dart';
+import '../features/settings/themes_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(authStateProvider, (prev, next) {
@@ -108,6 +109,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings/plans',
         builder: (context, state) => const PlansPage(),
+      ),
+      GoRoute(
+        path: '/settings/themes',
+        builder: (context, state) => const ThemesPage(),
       ),
     ],
   );

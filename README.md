@@ -36,7 +36,10 @@ supabase/
 scripts/
   cloudflare-email-routing.ps1  Cloudflare Email Routing setup (destinations + rules)
 docs/
-  emails.md             Email infrastructure (Brevo relay, DNS, edge functions, secrets)
+  auth.md               Authentication (Supabase Auth + Google, dashboard setup)
+  backend.md            Supabase backend: schema, RPCs, edge functions, transactional email
+  site.md               Marketing site (pocketapps.github.io)
+  monetizacao-stripe.md Monetization/Stripe: plans, phases, operational status
 .github/
   workflows/            CI pipeline
 ```
@@ -52,6 +55,8 @@ await PocketAuth.initialize(appAuthConfig);
 
 The `appName` scopes data per app (via `user_app_access` in the database), while all auth UI, logic,
 edge functions and the schema are shared.
+
+See [`docs/auth.md`](docs/auth.md) for the full auth setup (flows, deep links, dashboard config).
 
 ## Getting started
 
@@ -69,7 +74,7 @@ Each app requires a Supabase project and a Google OAuth client — see the app R
 ## Email
 
 Transactional email is sent through the Brevo SMTP relay via shared edge functions.
-See [`docs/emails.md`](docs/emails.md) for the full setup (senders, DNS, functions, secrets).
+See [`docs/backend.md`](docs/backend.md) (Email section) for the full setup (senders, DNS, functions, secrets).
 
 ## CI
 

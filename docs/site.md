@@ -35,6 +35,7 @@
 
 - Preços/links em `pricing.html` e `themes.html`; `APP_NAME = 'expenses'` em ambas; `SUPABASE_URL = https://vlbhnlzqixmxtlpqsggd.supabase.co`.
 - Botões mock `buy.stripe.com/TODO_*` → decisão de 2026-08: mostrar **"Em breve"** desativado enquanto não houver link real. Voltar a "Comprar" automaticamente quando os links reais forem inseridos.
+- **Loja de temas na app (2026-08-04)**: a página `/settings/themes` do PocketExpenses abre `https://pocketapps.pt/themes.html` para comprar os temas pagos (Ocean, Autumn, Galaxy) — os temas comprados sincronizam via `get_user_themes`.
 - **TODOs a substituir quando os Payment Links Stripe existirem**:
   - `themes.html`: `ocean` / `autumn` / `galaxy`
   - `pricing.html`: `premium` / `annual` / `founder`
