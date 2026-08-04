@@ -47,7 +47,7 @@ O site usa o **mesmo** projeto Supabase/anon key e os **mesmos RPCs** do app (`c
 
 | Página | Fluxo |
 |---|---|
-| `index.html` (homepage) | **Login / Criar conta** por email/palavra-passe **+ Google** — espelha o `AuthPage` do app. (2026-08-03) |
+| `index.html` (homepage) | Botão **Entrar** (redireciona para `conta.html`) — a homepage tem apenas CTA "Entrar". Login/signup dedicado está em `conta.html`. (2026-08-04) |
 | `themes.html` | Magic link (`signInWithOtp` + `emailRedirectTo: window.location.href`) |
 | `pricing.html` | Magic link (idem) |
 
@@ -55,8 +55,8 @@ O site usa o **mesmo** projeto Supabase/anon key e os **mesmos RPCs** do app (`c
 
 - **Entrar**: `signInWithPassword` → RPC `check_app_access`; sem acesso à app → "Não tens conta nesta app." (e faz `signOut`).
 - **Criar conta**: `signUp` com `data: { app_name, privacy_accepted, terms_accepted, age_confirmed }` (mesmos metadados do app) + `emailRedirectTo: https://pocketapps.pt/`. Com `mailer_autoconfirm=false` o user **confirma por email** antes do 1º login. "Already registered" → RPC `add_app_access` + mensagem "Conta encontrada! Faz login."
-- **Google**: `signInWithOAuth({ provider: 'google', redirectTo: 'https://pocketapps.pt/' })`; acesso à app concedido automaticamente (provider `google` no `app_metadata`).
-- Depois de entrar: fica na homepage com barra "Sessão iniciada: email" + "Sair".
+- **Google** (2026-08-04): `signInWithOAuth({ provider: 'google', redirectTo: 'https://pocketapps.pt/conta.html?google=1' })` — o redirect volta para `conta.html?google=1`; acesso à app concedido automaticamente via `add_app_access` (provider `google` no `app_metadata`). **Novos users Google** → consent dialog (privacy + terms + idade, igual ao `_ConsentDialog` da app Flutter) + welcome email — antes de serem redirecionados para a homepage. Users existentes são redirecionados direto.
+- Navbar: após login, mostra o **email** do utilizador (em vez de "Entrar").
 
 ### Bugs resolvidos (2026-08-03)
 

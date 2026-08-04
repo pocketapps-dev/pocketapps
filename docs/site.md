@@ -18,8 +18,8 @@
 
 ## Fluxo de autenticação (2026-08-04)
 
-- **Navbar mínima**: logo à esquerda, toggle de tema + **Entrar** / **Criar conta** à direita. Links internos (Apps, Features, Preços, Temas) só aparecem no menu de utilizador autenticado.
-- **`conta.html`** — página dedicada de login/signup (email/palavra-passe + Google), espelha o auth do app (RPCs `check_app_access`/`add_app_access`, metadados de consentimento, confirmação por email). Suporta `?redirect=apps|features|pricing|themes` para voltar à página pretendida após login.
+- **Navbar mínima**: logo à esquerda, toggle de tema + **Entrar** à direita. Links internos (Apps, Features, Preços, Temas) só aparecem no menu de utilizador autenticado. Após login, mostra o **email** do utilizador em vez de "Entrar".
+- **`conta.html`** — página dedicada de login/signup (email/palavra-passe + Google), espelha o auth do app (RPCs `check_app_access`/`add_app_access`, consent dialog para novos users Google, welcome email, metadados de consentimento, confirmação por email). Suporta `?redirect=apps|features|pricing|themes` para voltar à página pretendida após login.
 - **Páginas protegidas** (exigem sessão; redirecionam para `/conta.html?redirect=...`):
   - `apps.html`, `features.html`, `pricing.html`, `themes.html`
 - **Páginas públicas**: `index.html` (homepage), `conta.html`, `contact.html`, `ativar.html`, `terms.html`, `privacy.html`.
