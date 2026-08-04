@@ -34,7 +34,7 @@ Auth → Providers:
    - `pt.pocketapps.pocketexpenses://auth-callback`
    - `pt.pocketapps.pocketfuel://auth-callback`
    - `pt.pocketapps.pocketshopping://auth-callback`
-   - `https://pocketapps.pt` · `https://pocketapps.pt/themes` · `https://pocketapps.pt/themes.html` · `https://pocketapps.pt/pricing` · `https://pocketapps.pt/pricing.html`
+   - `https://pocketapps.pt` · `https://pocketapps.pt/conta.html` · `https://pocketapps.pt/themes` · `https://pocketapps.pt/themes.html` · `https://pocketapps.pt/pricing` · `https://pocketapps.pt/pricing.html`
    - `https://pocketapps.github.io` · `https://pocketapps.github.io/themes.html` · `https://pocketapps.github.io/pricing.html`
    - Nota: o Cloudflare Pages faz 307 de `foo.html` → `foo`, e `window.location.href` do site é a URL canónica (`/themes`). Por isso é preciso BOTH (`/themes` e `/themes.html`). Um redirect no destino perderia o fragmento `#access_token` e partia o login — usar sempre a URL canónica no allowlist.
 3. **Site URL**: ✅ `https://pocketapps.pt` (corrigido 2026-08-03 — antes `pt.pocketapps.pocketexpenses://`, que fazia o clique do magic link do site não levar a lado nenhum)
