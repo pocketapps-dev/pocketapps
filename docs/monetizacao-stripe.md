@@ -14,8 +14,9 @@
 ## Loja de temas (à la carte)
 
 - **Premium** inclui 3 temas exclusivos (midnight, forest, sunset).
-- **Loja de temas**: adicionais à venda por 0,99€ cada (compra única, lifetime) — ex.: ocean, autumn, galaxy, rose.
+- **Loja de temas**: **todos** os temas à venda por 0,99€ cada (compra única, lifetime) — incl. ocean, autumn, galaxy, rose, e também os temas premium (midnight, forest, sunset). (2026-08-06)
 - **Free**: light + dark.
+- **Regra de negócio (2026-08-06)**: um user free pode comprar qualquer tema individualmente (0,99€). Se depois aderir ao Premium, a compra individual continua válida (não é perdida) — o Premium apenas desbloqueia os temas por subscrição. O webhook `stripe-webhook` trata a duplicação via `user_themes` (unique constraint).
 
 ## Fases no produto
 

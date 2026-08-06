@@ -35,9 +35,10 @@
 
 - Preços/links em `pricing.html` e `themes.html`; `APP_NAME = 'expenses'` em ambas; `SUPABASE_URL = https://vlbhnlzqixmxtlpqsggd.supabase.co`.
 - Botões mock `buy.stripe.com/TODO_*` → decisão de 2026-08: mostrar **"Em breve"** desativado enquanto não houver link real. Voltar a "Comprar" automaticamente quando os links reais forem inseridos.
-- **Loja de temas na app (2026-08-04)**: a página `/settings/themes` do PocketExpenses abre `https://pocketapps.pt/themes.html` para comprar os temas pagos (Ocean, Autumn, Galaxy) — os temas comprados sincronizam via `get_user_themes`.
+- **Loja de temas na app (2026-08-04)**: a página `/settings/themes` do PocketExpenses abre `https://pocketapps.pt/themes.html` para comprar os temas pagos — os temas comprados sincronizam via `get_user_themes`.
+- **Temas premium compráveis individualmente (2026-08-06)**: todos os temas (incluindo os 3 do Premium: Midnight, Forest, Sunset) mostram "Comprar" (0,99€) para users free — quem tem Premium vê "Incluído no Premium". Se um user free comprar um tema e depois aderir ao Premium, a compra mantém-se (não é perdida).
 - **TODOs a substituir quando os Payment Links Stripe existirem**:
-  - `themes.html`: `ocean` / `autumn` / `galaxy`
+  - `themes.html`: `midnight` / `forest` / `sunset` / `ocean` / `autumn` / `galaxy`
   - `pricing.html`: `premium` / `annual` / `founder`
   - Ver [`docs/monetizacao-stripe.md`](monetizacao-stripe.md) para o plano de Payment Links.
 - Páginas legais publicadas: `https://pocketapps.pt/terms` e `/privacy` (HTTP 200) — rascunhos fonte em [`docs/legal/`](legal/).
