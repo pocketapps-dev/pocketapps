@@ -1,20 +1,28 @@
 # PocketApps — Monetização / Stripe (feature)
 
-> Estratégia de monetização + estado operacional (8 passos). Atualizado em 2026-08-03.
+> Estratégia de monetização + estado operacional (8 passos). Atualizado em 2026-08-08.
 
 ## Modelo de planos
 
-| Plano | Tipo | Preço | Inclui |
+| Plano | Tipo | Preço (base, sem IVA) | Inclui |
 |---|---|---|---|
-| **Free** | — | 0€ | 10 despesas ativas, 10 categorias, anúncios, sem editar categorias |
-| **Premium** | Recorrente | 1,49€/mês | Tudo: ilimitado, sem anúncios, widgets, relatórios, wizard, 3 temas |
-| **Premium Anual** | Recorrente | 14,99€/ano | Tudo do Premium + 3 temas |
-| **Founder** | One-time | 29,99€ (50% off de 59,98€) | Tudo + todas as apps (bundle), lifetime + early access |
+| **Free** | — | 0€ | Limites por app (ex.: 10 despesas ativas, 10 categorias, anúncios). **Por conta**: registo numa app → Free em todas |
+| **Premium** | Recorrente | 1,49€/mês · 14,99€/ano | **Todas as apps** (atuais + futuras): ilimitado, sem anúncios, widgets, relatórios, wizard, 3 temas |
+| **Founder** | One-time (vitalício) | 25€/app × nº apps → 3 apps = **75€**; **50% no total só p/ os 1ºs 5 founders** = 37,50€; founders 6–25 = 75€ | Tudo do Premium vitalício em todas as apps + early access. **Só em fase de desenvolvimento; máximo 25 pessoas** |
+| **Temas à la carte** | One-time | 0,99€/tema (a confirmar) | Compra única **por conta** (válida em todas as apps); Premium inclui 3 temas |
+
+Decisões de 2026-08-08:
+
+- **Free e Premium são por conta** — âmbito = todas as apps; o Premium é um **SKU único**.
+- O **Founder** é a compra **vitalícia do mesmo Premium** — o "25€/app" é a matemática do preço (soma das apps + desconto aplicado depois), não subscrições por app.
+- **IVA**: a taxa varia por país — na UE (regime OSS) aplica-se a taxa do **país do cliente** (PT 23%, ES 21%, DE 19%, ...); fora da UE, serviços digitais B2C normalmente sem IVA. Preços no site exibidos **sem IVA** (nota "**+ IVA**"); o IVA é aplicado apenas **no checkout** (Stripe Tax ou serviço de faturação a escolher).
+- **Gateway / faturação**: ainda em estudo — reavaliar Payment Links vs Checkout Session e serviço de invoice (app internacional com foco em PT).
 
 ## Loja de temas (à la carte)
 
 - **Premium** inclui 3 temas exclusivos (midnight, forest, sunset).
 - **Loja de temas**: **todos** os temas à venda por 0,99€ cada (compra única, lifetime) — incl. ocean, autumn, galaxy, rose, e também os temas premium (midnight, forest, sunset). (2026-08-06)
+- **Âmbito da compra (2026-08-08)**: por **conta** — um tema comprado fica disponível em todas as apps (não só expenses).
 - **Free**: light + dark.
 - **Regra de negócio (2026-08-06)**: um user free pode comprar qualquer tema individualmente (0,99€). Se depois aderir ao Premium, a compra individual continua válida (não é perdida) — o Premium apenas desbloqueia os temas por subscrição. O webhook `stripe-webhook` trata a duplicação via `user_themes` (unique constraint).
 
@@ -25,7 +33,7 @@
 | **1 — Anúncios (Free)** | Native no dashboard, Banner no rodapé, Interstitial máx. 1x/dia após criar despesa, Rewarded opcional no paywall | `google_mobile_ads` (AdMob) + Google UMP (RGPD); ~0,63€/user/mês |
 | **2 — Gates de limite** | Despesas ativas 10 (Free) / ilimitado; Categorias 10 / ilimitadas; editar categorias = Premium | `ExpenseActions.create()`, `CategoryActions.create()`, `CategoryActions.update()`, `CategoriesPage`; paywall `premium_gate_dialog.dart` |
 | **3 — Temas Premium** | Free = light+dark; Premium = +3 temas | `theme_models.dart`, `AppTheme` seedColor dinâmico, gate no `PreferencesPage` |
-| **4 — Código Founder** | Bundle 3 apps a 29,99€ | Migration SQL (check aceita `'all'`); RPC `validate_activation_code` ativa as 3 apps; dialog aceita códigos `all` |
+| **4 — Código Founder** | Bundle **todas as apps** a 25€/app (50% no total só p/ 1ºs 5; máx. 25 pessoas) | Migration SQL (check aceita `'all'`); RPC `validate_activation_code` ativa todas as apps; dialog aceita códigos `all` |
 | **5 — Relatórios elaborados** | Free = básico; Premium = Δ% vs mês anterior, top 3, recorrentes vs únicas, dica | `send-monthly-report` verifica subscrição |
 | **6 — Widgets Home Screen** | Free = normal; Premium = widgets (próximas despesas, total do mês) | `home_widget` + configuração nativa (AndroidManifest/Info.plist) + cache local |
 | **7 — Wizard Premium** | Free = `ExpenseFormPage`; Premium = `ExpenseWizardPage` (7 passos) | gate no acesso ao wizard |
@@ -66,6 +74,8 @@ Metadados lidos pelo webhook (em Price/Product metadata):
 | `founder` | 29,99€ | `plan: founder`, `app_name: expenses` |
 
 - `user_id` resolvido pelo webhook via `client_reference_id` (o link recebe-o por parâmetro na URL).
+
+> **Em revisão (2026-08-08)**: com o Premium a passar a "todas as apps" (1 SKU por conta), estes links/metadados mudam de âmbito — `app_name: expenses` passa a âmbito de conta/todas as apps; gateway (Payment Links vs Checkout Session) e faturação/IVA ainda em estudo.
 
 ## Edge Function `stripe-webhook`
 

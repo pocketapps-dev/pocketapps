@@ -1,7 +1,7 @@
 # PocketApps — Estado Global do Projeto
 
 > Resumo completo do monorepo: o que existe, o que está em progresso e o que falta.
-> Atualizado em 2026-08-04.
+> Atualizado em 2026-08-08.
 
 ## 1. Visão geral
 
@@ -111,7 +111,7 @@ Pipeline funcionando (commits recentes `dce2886`, `75d7617`).
 
 Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 
-- **Planos**: Free · Premium 1,49€/mês · Premium Anual 14,99€/ano · Founder 29,99€ (one-time, bundle 3 apps). Temas à la carte 0,99€.
+- **Planos (decisão 2026-08-08)**: Free por conta (todas as apps) · Premium 1,49€/mês · 14,99€/ano — **todas as apps** (1 SKU) · Founder 25€/app (3 apps = 75€; 50% no total só p/ 1ºs 5 = 37,50€; máx. 25 pessoas, só em desenvolvimento) · Temas à la carte 0,99€/tema por conta. Preços base **sem IVA** ("+ IVA" no site, aplicado no checkout — OSS por país do cliente). Gateway/faturação ainda em estudo — ver [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 - **Passo 1 (temas/loja)** ✅ feito (migration + webhook) — ver acima.
 - **Passos 2–3** ✅: email provider + confirm email + **custom SMTP corrigido** (OTP chega à inbox); redirects e **Site URL** `https://pocketapps.pt` corrigidos (2026-08-03). Magic link do site a funcionar após fix do `SyntaxError` (rename `supabaseClient`, commit `d6f9839`); homepage com login/signup email/password + Google (commit `8dfb41e`).
 - **Passos 4–8** 🔴 **bloqueados**: dashboard da Stripe em baixo (erro do lado da Stripe) — impede criar 6 Payment Links, deploy do `stripe-webhook`, colocar links reais e substituir botões mock.
