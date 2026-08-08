@@ -18,6 +18,8 @@ Decisões de 2026-08-08:
 - **IVA**: a taxa varia por país — na UE (regime OSS) aplica-se a taxa do **país do cliente** (PT 23%, ES 21%, DE 19%, ...); fora da UE, serviços digitais B2C normalmente sem IVA. Preços no site exibidos **sem IVA** (nota "**+ IVA**"); o IVA é aplicado apenas **no checkout** (Stripe Tax ou serviço de faturação a escolher).
 - **Gateway / faturação**: ainda em estudo — reavaliar Payment Links vs Checkout Session e serviço de invoice (app internacional com foco em PT).
 
+**Na app (2026-08-08)**: a página de planos (`plans_page.dart`) mostra o **total das 3 apps** — Founder `€37,50` (50% OFF) ou `€75` — e lê a contagem real de founders via RPC pública `get_founder_count()` (`subscription_provider.dart`); desconto ativo enquanto `founder_count < 5`. Premium mostrado a `€14.99/ano`.
+
 ## Loja de temas (à la carte)
 
 - **Premium** inclui 3 temas exclusivos (midnight, forest, sunset).

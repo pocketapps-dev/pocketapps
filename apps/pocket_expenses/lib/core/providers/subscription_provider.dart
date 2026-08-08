@@ -13,6 +13,16 @@ final subscriptionProvider = FutureProvider<Subscription?>((ref) async {
   return service.getSubscription();
 });
 
+final founderCountProvider = FutureProvider<int>((ref) async {
+  final client = Supabase.instance.client;
+  try {
+    final data = await client.rpc('get_founder_count');
+    return data is int ? data : 0;
+  } catch (_) {
+    return 0;
+  }
+});
+
 final subscriptionActionsProvider = Provider<SubscriptionActions>((ref) {
   return SubscriptionActions(ref);
 });

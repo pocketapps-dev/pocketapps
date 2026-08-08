@@ -25,7 +25,7 @@ packages/
   pocketapps_auth/        → Auth partilhada (Supabase + Google)
 supabase/
   schema.sql              → Fonte de verdade do schema (todas as apps)
-  migrations/             → 001_themes.sql, 002_report_type.sql
+  migrations/             → 001_themes.sql, 002_report_type.sql, 003_founder_count.sql
   functions/              → 5 Edge Functions (Deno)
 docs/
   auth.md                 → Autenticação (Supabase Auth + Google, setup no dashboard)
@@ -69,6 +69,7 @@ TODO.md                   → Tarefas A/B/C concluídas
 - Despesas: `get_or_create_monthly_status`, `toggle_expense_paid`, `toggle_expense_skip`, `confirm_expense_amount`, `get_effective_amount`.
 - Relatórios: `archive_monthly_summary`, `cleanup_old_data`.
 - Códigos: `validate_activation_code`.
+- Monetização (2026-08-08): `get_founder_count` — RPC pública que devolve o nº de founders registados; consumida pela página de planos para mostrar o desconto Founder 50% OFF (`founder_count < 5`).
 - Temas: `get_user_themes`, `validate_theme_activation_code`, `grant_theme_to_user`.
 - Trigger genérico `update_updated_at` em profiles/expenses/subscriptions/user_settings/report_preferences.
 
@@ -77,6 +78,7 @@ TODO.md                   → Tarefas A/B/C concluídas
 |---|---|---|
 | `001_themes.sql` | 3 tabelas (themes, user_themes, theme_purchases) + 3 RPCs + 7 temas seed + unique constraint | ✅ Aplicada e verificada no remoto (`20260803051308`) |
 | `002_report_type.sql` | `report_preferences.report_type` (`simple`/`detailed`) | ✅ Aplicada e verificada no remoto (`20260803043706`) |
+| `003_founder_count.sql` | RPC pública `get_founder_count()` | ✅ No schema (`supabase/schema.sql`) |
 
 ### Edge Functions (5)
 `delete-account`, `report-unsubscribe`, `send-monthly-report` (relatório mensal, usa `report_type`), `send-welcome-email`, `stripe-webhook` (payment link webhook — **não deployado ainda**, usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo).
@@ -117,10 +119,11 @@ Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 - **Passos 4–8** 🔴 **bloqueados**: dashboard da Stripe em baixo (erro do lado da Stripe) — impede criar 6 Payment Links, deploy do `stripe-webhook`, colocar links reais e substituir botões mock.
 - **Botões mock**: `buy.stripe.com/TODO_*` → decisão de 2026-08: mostrar **"Em breve"** desativado enquanto não houver link real (`.btn-buy` em `style.css`, `pricing.html`, `themes.html`).
 
-## 8. WIP neste commit (2026-08-04)
+## 8. WIP neste commit (2026-08-08)
 
-- **Loja de temas na app** (PocketExpenses): `core/models/theme_info.dart`, `core/services/theme_store_service.dart`, `core/providers/theme_store_provider.dart`, `features/settings/themes_page.dart` (novos); rota `/settings/themes` + entry em `preferences_page.dart`; seeds `autumn`/`galaxy` + `getThemeFromSeed` em `config/theme.dart`.
-- Docs: reorg concluída (`docs/auth.md`, `docs/backend.md`, `docs/site.md`, `docs/monetizacao-stripe.md`; removidos `docs/emails.md`, `docs/monetizacao.md`, `docs/monetizacao-status.md`), secção "Loja de temas (app)" em `backend.md`, nota em `site.md`, `TODO.md` Tarefa F, `README.md` aponta para os novos docs.
+- **Novo modelo de planos na app** (PocketExpenses): página de planos (`plans_page.dart`) mostra Premium `€14.99/ano` e Founder **total das 3 apps** — `€37,50` (50% OFF) ou `€75`; `founderCountProvider` (`subscription_provider.dart`) lê a RPC `get_founder_count()` e ativa o desconto enquanto `founder_count < 5`; banner do dashboard `€14.99/ano`; termos atualizados em `about_page.dart`.
+- Docs: `003_founder_count.sql` + RPC `get_founder_count` registados em `backend.md`/`project-status.md`; nota da app em `monetizacao-stripe.md`.
+- `flutter analyze`: ✅ sem issues.
 
 `devtools_options.yaml` (local) — não commitar. `supabase/migrations/` e `supabase/functions/stripe-webhook/` já aplicados no remoto (commit `a6c2740`).
 

@@ -85,9 +85,10 @@ class _AboutPageState extends State<AboutPage> {
                                 'despesas recorrentes e únicas.',
                             'És responsável por manter a tua conta e '
                                 'credenciais em segurança.',
-                            'O plano Free é gratuito. Premium e Founder são '
-                                'ativados mediante pagamento único e código '
-                                'de ativação.',
+                            'O plano Free é gratuito. O Premium é uma subscrição '
+                                'anual (€14.99/ano) e o Founder é um pagamento '
+                                'único por app (€25, com 50% OFF em lançamento). '
+                                'Ambos são ativados mediante código de ativação.',
                             'É proibido usar o serviço para fins ilegais ou '
                                 'para violar direitos de terceiros.',
                             'Os teus dados podem ser exportados ou eliminados '

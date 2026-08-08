@@ -21,6 +21,8 @@ class PlansPage extends ConsumerWidget {
     final isPremium = subscription?.isActive == true;
     final planName = subscription?.displayName ?? 'Free';
     final activeKey = subscription?.plan ?? 'free';
+    final founderCount = ref.watch(founderCountProvider).value ?? 0;
+    final founderDiscount = founderCount < 5;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Planos e Preços')),
@@ -100,8 +102,8 @@ class PlansPage extends ConsumerWidget {
           _PricingCard(
             icon: Icons.workspace_premium,
             name: 'Premium',
-            price: '€1.99',
-            priceNote: 'uma vez',
+            price: '€14.99',
+            priceNote: 'por ano · €1.49/mês',
             features: const [
               'Tudo do Free',
               'Relatórios por email',
@@ -115,8 +117,10 @@ class PlansPage extends ConsumerWidget {
           _PricingCard(
             icon: Icons.emoji_events_outlined,
             name: 'Founder',
-            price: '€4.99',
-            priceNote: 'uma vez',
+            price: founderDiscount ? '€37.50' : '€75',
+            priceNote: founderDiscount
+                ? '3 apps · pagamento único · 50% OFF (€25/app)'
+                : '3 apps · pagamento único · €25/app · Lifetime',
             features: const [
               'Tudo do Premium',
               'Acesso antecipado a novas apps',

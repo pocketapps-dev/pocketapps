@@ -23,6 +23,7 @@ RLS ativado nas tabelas principais. Índices optimizados por `user_id`/`app_name
 - Despesas: `get_or_create_monthly_status`, `toggle_expense_paid`, `toggle_expense_skip`, `confirm_expense_amount`, `get_effective_amount`
 - Relatórios: `archive_monthly_summary`, `cleanup_old_data`
 - Códigos: `validate_activation_code`
+- Monetização: `get_founder_count` (RPC pública — contagem de founders registados, consumida pela página de planos para o desconto 50% OFF) (2026-08-08)
 - Temas: `get_user_themes` (catálogo + disponibilidade por utilizador — consumido pela **loja de temas da app**, ver abaixo), `validate_theme_activation_code`, `grant_theme_to_user`
 
 ### Migrations
@@ -31,6 +32,7 @@ RLS ativado nas tabelas principais. Índices optimizados por `user_id`/`app_name
 |---|---|---|
 | `001_themes.sql` | 3 tabelas (themes, user_themes, theme_purchases) + 3 RPCs + 7 temas seed + unique constraint | ✅ Aplicada (`20260803051308`) |
 | `002_report_type.sql` | `report_preferences.report_type` (`simple`/`detailed`) | ✅ Aplicada (`20260803043706`) |
+| `003_founder_count.sql` | RPC pública `get_founder_count()` (leitura da contagem de founders) | ✅ No schema (`supabase/schema.sql`) |
 
 ## Edge Functions (5, Deno)
 

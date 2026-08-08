@@ -619,7 +619,7 @@ class _PlanBanner extends StatelessWidget {
                     Text(
                       isPremium
                           ? 'Ativo até ${_formatDate(subscription?.endsAt)}'
-                          : 'Faz upgrade para Premium por €1.99 (uma vez)',
+                          : 'Faz upgrade para Premium · €14.99/ano',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.grey.shade600,
                       ),
