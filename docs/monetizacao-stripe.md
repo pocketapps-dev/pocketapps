@@ -20,6 +20,7 @@ Decisões de 2026-08-08:
 
 **Na app (2026-08-08)**: a página de planos (`plans_page.dart`) mostra o **total das 3 apps** — Founder `€37,50` (50% OFF) ou `€75` — e lê a contagem real de founders via RPC pública `get_founder_count()` (`subscription_provider.dart`); desconto ativo enquanto `founder_count < 5`. Premium mostrado a `€14.99/ano`.
 - **Fluxo de compra (2026-08-08)**: cards de topo em Definições (`settings_page.dart`) e Conta (`account_page.dart` `_PlanCard`) → `/settings/plans`; o botão "Comprar no website" da página de planos abre `https://pocketapps.pt/pricing.html`. O site mantém o utilizador autenticado e mostra botões de compra desativados com labels dinâmicos do `config.js` ("Comprar Premium · €14.99/ano", "Comprar Founder · €37.50").
+- **Fix fluxo app → site (2026-08-08)**: (a) o botão "Comprar no website" da app não reencaminhava porque `_openUrl` estava gateado por `canLaunchUrl()` (devolve `false` para `https` em emuladores/simuladores) — corrigido com `launchUrl` direto + try/catch + SnackBar; (b) `pricing.html` não mostrava os botões "Comprar" porque `config.js` era carregado com `defer` e o script inline lia `window.POCKETAPPS_CONFIG` sincronamente — corrigido removendo `defer`.
 
 ## Loja de temas (à la carte)
 

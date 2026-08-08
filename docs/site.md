@@ -1,7 +1,7 @@
 # PocketApps — Site (feature)
 
 > Site institucional num repo separado, git-ignored no monorepo principal.
-> Atualizado em 2026-08-04.
+> Atualizado em 2026-08-08.
 
 ## Visão geral
 
@@ -36,6 +36,7 @@
 - Preços/links em `pricing.html` e `themes.html`; `APP_NAME = 'expenses'` em ambas; `SUPABASE_URL = https://vlbhnlzqixmxtlpqsggd.supabase.co`.
 - Botões mock `buy.stripe.com/TODO_*` → decisão de 2026-08: botões **"Comprar" desativados** com labels dinâmicos lidos do `config.js` (`makeBuyButton` em `pricing.html`, ex.: "Comprar Premium · €14.99/ano", "Comprar Founder · €37.50"). Voltar a ativos quando os links reais forem inseridos. `themes.html` mantém "Em breve".
 - **Fluxo de planos app → site (2026-08-08)**: o card de topo de Definições e o `_PlanCard` da Conta (PocketExpenses) navegam para `/settings/plans`; o botão "Comprar no website" da página de planos abre `https://pocketapps.pt/pricing.html`, onde o utilizador autenticado vê os botões de compra acima.
+- **Fix `pricing.html` (2026-08-08)**: o `config.js` era carregado com `defer`, mas o script inline lê `window.POCKETAPPS_CONFIG` sincronamente → `CONFIG` `undefined` → `TypeError` matava o script (sem botões "Comprar", sem countdown founder, sem redirect de auth). Corrigido: `defer` removido — `config.js` carrega na `<head>` antes do SDK Supabase.
 - **Loja de temas na app (2026-08-04)**: a página `/settings/themes` do PocketExpenses abre `https://pocketapps.pt/themes.html` para comprar os temas pagos — os temas comprados sincronizam via `get_user_themes`.
 - **Temas premium compráveis individualmente (2026-08-06)**: todos os temas (incluindo os 3 do Premium: Midnight, Forest, Sunset) mostram "Comprar" (0,99€) para users free — quem tem Premium vê "Incluído no Premium". Se um user free comprar um tema e depois aderir ao Premium, a compra mantém-se (não é perdida).
 - **TODOs a substituir quando os Payment Links Stripe existirem**:

@@ -17,10 +17,18 @@ class LegalPage extends StatelessWidget {
   final List<String> points;
   final String websiteUrl;
 
-  Future<void> _openUrl(String url) async {
+  Future<void> _openUrl(BuildContext context, String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível abrir o link. Tenta novamente.'),
+          ),
+        );
+      }
     }
   }
 
@@ -80,7 +88,7 @@ class LegalPage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: () => _openUrl(websiteUrl),
+            onPressed: () => _openUrl(context, websiteUrl),
             icon: const Icon(Icons.open_in_new),
             label: const Text('Abrir no website'),
           ),

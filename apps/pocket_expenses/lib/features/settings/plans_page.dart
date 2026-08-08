@@ -8,10 +8,18 @@ import 'activation_code_dialog.dart';
 class PlansPage extends ConsumerWidget {
   const PlansPage({super.key});
 
-  Future<void> _openUrl(String url) async {
+  Future<void> _openUrl(BuildContext context, String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível abrir o link. Tenta novamente.'),
+          ),
+        );
+      }
     }
   }
 
@@ -135,7 +143,8 @@ class PlansPage extends ConsumerWidget {
           const SizedBox(height: 16),
 
           FilledButton.icon(
-            onPressed: () => _openUrl('https://pocketapps.pt/pricing.html'),
+            onPressed: () =>
+                _openUrl(context, 'https://pocketapps.pt/pricing.html'),
             icon: const Icon(Icons.shopping_cart_outlined),
             label: const Text('Comprar no website'),
             style: FilledButton.styleFrom(
@@ -168,7 +177,7 @@ class PlansPage extends ConsumerWidget {
                   title: const Text('Contacto'),
                   subtitle: const Text('geral@pocketapps.pt'),
                   trailing: const Icon(Icons.open_in_new, size: 18),
-                  onTap: () => _openUrl('mailto:geral@pocketapps.pt'),
+                  onTap: () => _openUrl(context, 'mailto:geral@pocketapps.pt'),
                 ),
               ],
             ),

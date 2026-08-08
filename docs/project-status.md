@@ -122,9 +122,15 @@ Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 ## 8. WIP neste commit (2026-08-08)
 
 - **Novo modelo de planos na app** (PocketExpenses): página de planos (`plans_page.dart`) mostra Premium `€14.99/ano` e Founder **total das 3 apps** — `€37,50` (50% OFF) ou `€75`; `founderCountProvider` (`subscription_provider.dart`) lê a RPC `get_founder_count()` e ativa o desconto enquanto `founder_count < 5`; banner do dashboard `€14.99/ano`; termos atualizados em `about_page.dart`.
-- **Fluxo de planos app → site** (este commit): card de topo de Definições (`settings_page.dart`) e `_PlanCard` da Conta (`account_page.dart`) navegam para `/settings/plans`; botão "Comprar no website" em `plans_page.dart` abre `https://pocketapps.pt/pricing.html`. No site, `pricing.html` (repo `pocketapps.github.io`) mostra botões "Comprar" desativados com labels dinâmicos do `config.js` (ex.: "Comprar Premium · €14.99/ano", "Comprar Founder · €37.50").
+- **Fluxo de planos app → site** (commit `7cb7bd8`): card de topo de Definições (`settings_page.dart`) e `_PlanCard` da Conta (`account_page.dart`) navegam para `/settings/plans`; botão "Comprar no website" em `plans_page.dart` abre `https://pocketapps.pt/pricing.html`. No site, `pricing.html` (repo `pocketapps.github.io`) mostra botões "Comprar" desativados com labels dinâmicos do `config.js` (ex.: "Comprar Premium · €14.99/ano", "Comprar Founder · €37.50").
 - Docs: `003_founder_count.sql` + RPC `get_founder_count` registados em `backend.md`/`project-status.md`; nota da app em `monetizacao-stripe.md`; fluxo app → site e labels do pricing em `site.md`/`monetizacao-stripe.md`.
 - `flutter analyze`: ✅ sem issues.
+
+### Fixes app → site (este commit)
+
+- **Bug app (botão não abria o link)**: `_openUrl(BuildContext, String)` em `plans_page.dart`, `about_page.dart` e `legal_page.dart` estava gateado por `canLaunchUrl()`, que devolve `false` para `https` em muitos emuladores/simuladores e falhava **silenciosamente** (sem reencaminhar nem avisar). Corrigido: `launchUrl(uri, mode: LaunchMode.externalApplication)` direto com try/catch + SnackBar "Não foi possível abrir o link. Tenta novamente.".
+- **Bug web (pricing sem botões "Comprar")**: `pricing.html` carregava `config.js` com `defer`, mas o script inline lê `window.POCKETAPPS_CONFIG` **sincronamente** → `CONFIG` era `undefined` → `TypeError` matava todo o script (sem botões comprar, sem countdown founder, sem redirect de auth). Corrigido: `defer` removido, `config.js` mantém-se na `<head>` antes do SDK Supabase.
+- `flutter analyze`/`dart analyze` excederam timeout nesta máquina (180s/300s) — análise estática não validada localmente; compilação confirmada pelo build (este commit).
 
 `devtools_options.yaml` (local) — não commitar. `supabase/migrations/` e `supabase/functions/stripe-webhook/` já aplicados no remoto (commit `a6c2740`).
 
@@ -143,7 +149,9 @@ Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 | 13 | Fases de monetização no produto (anúncios, gates, widgets, wizard) | 🟡 ver `monetizacao-stripe.md` |
 | 14 | Site: magic link não enviava (SyntaxError do CDN) + allowlist `/themes` `/pricing` | ✅ corrigido (2026-08-03, commit `d6f9839`) |
 | 15 | Site: login/signup por email/password + Google na homepage | ✅ feito (2026-08-03, commit `8dfb41e`) |
-| 16 | App: loja de temas (`/settings/themes` via `get_user_themes`) | ✅ feito (2026-08-04, este commit) |
+| 16 | App: loja de temas (`/settings/themes` via `get_user_themes`) | ✅ feito (2026-08-04, commit `7eeb809`) |
+| 17 | App: botão "Comprar no website" não reencaminhava (`canLaunchUrl` falhava silenciosamente) | ✅ corrigido (este commit — `launchUrl` direto + SnackBar) |
+| 18 | Site: `pricing.html` sem botões "Comprar" (`config.js` carregado com `defer`, script corria antes) | ✅ corrigido (este commit — `defer` removido) |
 
 ## 10. Notas de manutenção
 

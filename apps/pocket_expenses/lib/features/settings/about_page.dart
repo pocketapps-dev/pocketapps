@@ -30,10 +30,18 @@ class _AboutPageState extends State<AboutPage> {
     });
   }
 
-  Future<void> _openUrl(String url) async {
+  Future<void> _openUrl(BuildContext context, String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível abrir o link. Tenta novamente.'),
+          ),
+        );
+      }
     }
   }
 
@@ -141,7 +149,7 @@ class _AboutPageState extends State<AboutPage> {
                   title: const Text('Contacto'),
                   subtitle: const Text('geral@pocketapps.pt'),
                   trailing: const Icon(Icons.open_in_new, size: 18),
-                  onTap: () => _openUrl('mailto:geral@pocketapps.pt'),
+                  onTap: () => _openUrl(context, 'mailto:geral@pocketapps.pt'),
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -149,7 +157,7 @@ class _AboutPageState extends State<AboutPage> {
                   title: const Text('PocketApps'),
                   subtitle: const Text('pocketapps.pt'),
                   trailing: const Icon(Icons.open_in_new, size: 18),
-                  onTap: () => _openUrl('https://pocketapps.pt'),
+                  onTap: () => _openUrl(context, 'https://pocketapps.pt'),
                 ),
               ],
             ),
