@@ -13,7 +13,8 @@ class AccountPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final supabase = PocketAuth.client;
     final user = supabase.auth.currentUser;
-    final isEmailUser = user?.identities?.any((i) => i.provider != 'google') ?? true;
+    final isEmailUser =
+        user?.identities?.any((i) => i.provider != 'google') ?? true;
 
     final subscription = ref.watch(subscriptionProvider).value;
 
@@ -35,8 +36,7 @@ class AccountPage extends ConsumerWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('/profile/change-email'),
                   ),
-                if (isEmailUser)
-                  const Divider(height: 1),
+                if (isEmailUser) const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.lock_outlined),
                   title: const Text('Alterar Palavra-passe'),
@@ -104,61 +104,68 @@ class _PlanCard extends ConsumerWidget {
     final planName = subscription?.displayName ?? 'Free';
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: isPremium
-                  ? Colors.amber.shade100
-                  : Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Icon(
-                isPremium ? Icons.star : Icons.person,
-                color: isPremium
-                    ? Colors.amber.shade800
-                    : Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isPremium ? 'PocketExpenses $planName' : 'Plano Free',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    isPremium
-                        ? 'Ativo até ${_formatDate(subscription.endsAt)}'
-                        : 'Ativa o Premium com um código',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-            if (isPremium)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'PREMIUM',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.amber.shade900,
-                  ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/settings/plans'),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: isPremium
+                    ? Colors.amber.shade100
+                    : Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Icon(
+                  isPremium ? Icons.star : Icons.person,
+                  color: isPremium
+                      ? Colors.amber.shade800
+                      : Theme.of(context).colorScheme.primary,
                 ),
               ),
-          ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isPremium ? 'PocketExpenses $planName' : 'Plano Free',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isPremium
+                          ? 'Ativo até ${_formatDate(subscription.endsAt)}'
+                          : 'Ativa o Premium com um código',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              if (isPremium)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'PREMIUM',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber.shade900,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

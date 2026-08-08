@@ -19,6 +19,7 @@ Decisões de 2026-08-08:
 - **Gateway / faturação**: ainda em estudo — reavaliar Payment Links vs Checkout Session e serviço de invoice (app internacional com foco em PT).
 
 **Na app (2026-08-08)**: a página de planos (`plans_page.dart`) mostra o **total das 3 apps** — Founder `€37,50` (50% OFF) ou `€75` — e lê a contagem real de founders via RPC pública `get_founder_count()` (`subscription_provider.dart`); desconto ativo enquanto `founder_count < 5`. Premium mostrado a `€14.99/ano`.
+- **Fluxo de compra (2026-08-08)**: cards de topo em Definições (`settings_page.dart`) e Conta (`account_page.dart` `_PlanCard`) → `/settings/plans`; o botão "Comprar no website" da página de planos abre `https://pocketapps.pt/pricing.html`. O site mantém o utilizador autenticado e mostra botões de compra desativados com labels dinâmicos do `config.js` ("Comprar Premium · €14.99/ano", "Comprar Founder · €37.50").
 
 ## Loja de temas (à la carte)
 
@@ -87,8 +88,8 @@ Após deploy: Stripe → Developers → Webhooks → add endpoint com evento `ch
 
 ## Botões mock (decisão de 2026-08)
 
-- Cliques em "Comprar" vão hoje para `buy.stripe.com/TODO_*` (link partido).
-- Mudar para botão desativado "Em breve" enquanto o link for mock; voltar a "Comprar" quando os links reais forem inseridos.
+- Cliques em "Comprar" irão para os links reais do Stripe (hoje: botões **desativados**).
+- Em `pricing.html` os botões mostram labels dinâmicos do `config.js` (ex.: "Comprar Premium · €14.99/ano", "Comprar Founder · €37.50"); em `themes.html` mostram "Em breve". Ativar quando os links reais forem inseridos.
 - CSS: `pocketapps.github.io/style.css` linha 932 (`.btn-buy`). Detalhes: [`docs/site.md`](site.md).
 
 ## Notas

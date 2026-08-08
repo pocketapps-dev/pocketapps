@@ -38,11 +38,11 @@ class PlansPage extends ConsumerWidget {
                     radius: 22,
                     backgroundColor: isPremium
                         ? Colors.amber.shade100
-                        : Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest,
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
                     child: Icon(
-                      isPremium ? Icons.workspace_premium : Icons.person_outline,
+                      isPremium
+                          ? Icons.workspace_premium
+                          : Icons.person_outline,
                       color: isPremium
                           ? Colors.amber.shade800
                           : Theme.of(context).colorScheme.primary,
@@ -63,8 +63,9 @@ class PlansPage extends ConsumerWidget {
                           isPremium
                               ? 'Ativo até ${_formatDate(subscription?.endsAt)}'
                               : 'Estás a usar o plano gratuito',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.grey),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                         ),
                       ],
                     ),
@@ -134,7 +135,7 @@ class PlansPage extends ConsumerWidget {
           const SizedBox(height: 16),
 
           FilledButton.icon(
-            onPressed: () => _openUrl('https://pocketapps.pt'),
+            onPressed: () => _openUrl('https://pocketapps.pt/pricing.html'),
             icon: const Icon(Icons.shopping_cart_outlined),
             label: const Text('Comprar no website'),
             style: FilledButton.styleFrom(
@@ -205,8 +206,9 @@ class _PricingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final Color accent =
-        recommended ? theme.colorScheme.primary : Colors.grey.shade700;
+    final Color accent = recommended
+        ? theme.colorScheme.primary
+        : Colors.grey.shade700;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -283,11 +285,7 @@ class _PricingCard extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.check,
-                      size: 18,
-                      color: Colors.green.shade600,
-                    ),
+                    Icon(Icons.check, size: 18, color: Colors.green.shade600),
                     const SizedBox(width: 8),
                     Expanded(child: Text(f, style: theme.textTheme.bodyMedium)),
                   ],
@@ -300,4 +298,3 @@ class _PricingCard extends StatelessWidget {
     );
   }
 }
-

@@ -117,12 +117,13 @@ Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 - **Passo 1 (temas/loja)** ✅ feito (migration + webhook) — ver acima.
 - **Passos 2–3** ✅: email provider + confirm email + **custom SMTP corrigido** (OTP chega à inbox); redirects e **Site URL** `https://pocketapps.pt` corrigidos (2026-08-03). Magic link do site a funcionar após fix do `SyntaxError` (rename `supabaseClient`, commit `d6f9839`); homepage com login/signup email/password + Google (commit `8dfb41e`).
 - **Passos 4–8** 🔴 **bloqueados**: dashboard da Stripe em baixo (erro do lado da Stripe) — impede criar 6 Payment Links, deploy do `stripe-webhook`, colocar links reais e substituir botões mock.
-- **Botões mock**: `buy.stripe.com/TODO_*` → decisão de 2026-08: mostrar **"Em breve"** desativado enquanto não houver link real (`.btn-buy` em `style.css`, `pricing.html`, `themes.html`).
+- **Botões mock**: `buy.stripe.com/TODO_*` → decisão de 2026-08: botões **"Comprar" desativados** com labels dinâmicos do `config.js` em `pricing.html` (ex.: "Comprar Premium · €14.99/ano"); `themes.html` mantém "Em breve" (`.btn-buy` em `style.css`).
 
 ## 8. WIP neste commit (2026-08-08)
 
 - **Novo modelo de planos na app** (PocketExpenses): página de planos (`plans_page.dart`) mostra Premium `€14.99/ano` e Founder **total das 3 apps** — `€37,50` (50% OFF) ou `€75`; `founderCountProvider` (`subscription_provider.dart`) lê a RPC `get_founder_count()` e ativa o desconto enquanto `founder_count < 5`; banner do dashboard `€14.99/ano`; termos atualizados em `about_page.dart`.
-- Docs: `003_founder_count.sql` + RPC `get_founder_count` registados em `backend.md`/`project-status.md`; nota da app em `monetizacao-stripe.md`.
+- **Fluxo de planos app → site** (este commit): card de topo de Definições (`settings_page.dart`) e `_PlanCard` da Conta (`account_page.dart`) navegam para `/settings/plans`; botão "Comprar no website" em `plans_page.dart` abre `https://pocketapps.pt/pricing.html`. No site, `pricing.html` (repo `pocketapps.github.io`) mostra botões "Comprar" desativados com labels dinâmicos do `config.js` (ex.: "Comprar Premium · €14.99/ano", "Comprar Founder · €37.50").
+- Docs: `003_founder_count.sql` + RPC `get_founder_count` registados em `backend.md`/`project-status.md`; nota da app em `monetizacao-stripe.md`; fluxo app → site e labels do pricing em `site.md`/`monetizacao-stripe.md`.
 - `flutter analyze`: ✅ sem issues.
 
 `devtools_options.yaml` (local) — não commitar. `supabase/migrations/` e `supabase/functions/stripe-webhook/` já aplicados no remoto (commit `a6c2740`).

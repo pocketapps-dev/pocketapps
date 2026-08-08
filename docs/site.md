@@ -28,13 +28,14 @@
 ## Configuração central de preços/promoções
 
 - **`config.js`** — ficheiro central com preços e promoções (`window.POCKETAPPS_CONFIG`). Editar aqui para mudar preços/promoções em todas as páginas.
-- Premium: `€17.88` por ano · `€1.49/mês` (preço total anual visível).
-- Founder: `€29.99` pagamento único · `50% OFF` (de `€59.99`).
+- Premium: `€14.99` por ano · `€1.49/mês` · "todas as apps" (`plans.premium.priceTotal`).
+- Founder: `€25`/app × `appCount: 3` = **`€75`** pagamento único · `50% OFF` no total enquanto `founder_count < 5` (`plans.founder.promotionThreshold`).
 
 ## Monetização no site
 
 - Preços/links em `pricing.html` e `themes.html`; `APP_NAME = 'expenses'` em ambas; `SUPABASE_URL = https://vlbhnlzqixmxtlpqsggd.supabase.co`.
-- Botões mock `buy.stripe.com/TODO_*` → decisão de 2026-08: mostrar **"Em breve"** desativado enquanto não houver link real. Voltar a "Comprar" automaticamente quando os links reais forem inseridos.
+- Botões mock `buy.stripe.com/TODO_*` → decisão de 2026-08: botões **"Comprar" desativados** com labels dinâmicos lidos do `config.js` (`makeBuyButton` em `pricing.html`, ex.: "Comprar Premium · €14.99/ano", "Comprar Founder · €37.50"). Voltar a ativos quando os links reais forem inseridos. `themes.html` mantém "Em breve".
+- **Fluxo de planos app → site (2026-08-08)**: o card de topo de Definições e o `_PlanCard` da Conta (PocketExpenses) navegam para `/settings/plans`; o botão "Comprar no website" da página de planos abre `https://pocketapps.pt/pricing.html`, onde o utilizador autenticado vê os botões de compra acima.
 - **Loja de temas na app (2026-08-04)**: a página `/settings/themes` do PocketExpenses abre `https://pocketapps.pt/themes.html` para comprar os temas pagos — os temas comprados sincronizam via `get_user_themes`.
 - **Temas premium compráveis individualmente (2026-08-06)**: todos os temas (incluindo os 3 do Premium: Midnight, Forest, Sunset) mostram "Comprar" (0,99€) para users free — quem tem Premium vê "Incluído no Premium". Se um user free comprar um tema e depois aderir ao Premium, a compra mantém-se (não é perdida).
 - **TODOs a substituir quando os Payment Links Stripe existirem**:
