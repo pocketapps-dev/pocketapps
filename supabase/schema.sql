@@ -997,3 +997,24 @@ begin
   );
 end;
 $$ language plpgsql security definer;
+
+-- ============================================================
+-- FOUNDER COUNT (public — used by the pricing page)
+-- Exposes the number of founder subscribers so the site can
+-- render dynamic founder slots / launch discount (RLS on
+-- subscriptions hides rows from anon, so this runs definer).
+-- ============================================================
+create or replace function public.get_founder_count()
+returns int
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select count(distinct user_id)::int
+  from public.subscriptions
+  where plan = 'founder' and status = 'active';
+$$;
+
+revoke all on function public.get_founder_count() from public;
+grant execute on function public.get_founder_count() to anon, authenticated, service_role;
