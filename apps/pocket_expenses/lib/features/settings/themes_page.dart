@@ -89,6 +89,9 @@ class ThemesPage extends ConsumerWidget {
   }
 
   void _apply(WidgetRef ref, ThemeInfo theme) {
+    ref.read(themeModeProvider.notifier).setMode(
+      theme.brightness == 'dark' ? ThemeMode.dark : ThemeMode.light,
+    );
     ref.read(themeNameProvider.notifier).setTheme(theme.name);
   }
 

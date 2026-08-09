@@ -1,7 +1,7 @@
 # PocketApps — Backend (Supabase)
 
 > Backend partilhado: Postgres (schema + RPCs) + Edge Functions (Deno) + email transacional.
-> Atualizado em 2026-08-03.
+> Atualizado em 2026-08-09.
 
 ## Projeto remoto
 
@@ -24,7 +24,7 @@ RLS ativado nas tabelas principais. Índices optimizados por `user_id`/`app_name
 - Relatórios: `archive_monthly_summary`, `cleanup_old_data`
 - Códigos: `validate_activation_code`
 - Monetização: `get_founder_count` (RPC pública — contagem de founders registados, consumida pela página de planos para o desconto 50% OFF) (2026-08-08)
-- Temas: `get_user_themes` (catálogo + disponibilidade por utilizador — consumido pela **loja de temas da app**, ver abaixo), `validate_theme_activation_code`, `grant_theme_to_user`
+- Temas: `get_user_themes` (catálogo + disponibilidade por utilizador — consumido pela **loja de temas da app**, ver abaixo; desde 2026-08-09 devolve também a coluna `brightness` do tema), `validate_theme_activation_code`, `grant_theme_to_user`
 
 ### Migrations
 
@@ -33,6 +33,8 @@ RLS ativado nas tabelas principais. Índices optimizados por `user_id`/`app_name
 | `001_themes.sql` | 3 tabelas (themes, user_themes, theme_purchases) + 3 RPCs + 7 temas seed + unique constraint | ✅ Aplicada (`20260803051308`) |
 | `002_report_type.sql` | `report_preferences.report_type` (`simple`/`detailed`) | ✅ Aplicada (`20260803043706`) |
 | `003_founder_count.sql` | RPC pública `get_founder_count()` (leitura da contagem de founders) | ✅ No schema (`supabase/schema.sql`) |
+| `004_light_dark_themes.sql` | Temas gratuitos `light` (`Light`) e `dark` (`Dark`) na app `expenses` | ✅ Aplicada no remoto |
+| `005_theme_brightness.sql` | Coluna `themes.brightness` (`light`/`dark`) + default/constraint + `get_user_themes` com `brightness` | ✅ Aplicada no remoto |
 
 ## Edge Functions (5, Deno)
 
@@ -119,6 +121,7 @@ Desde 2026-08-04 a app consome `get_user_themes` (`p_app_name='expenses'`) para 
 - O RPC devolve o catálogo com `available`/`purchased` (free ⇒ `available=true`; premium ⇒ depende da subscrição `subscriptions`; pagos ⇒ depende de `user_themes`).
 - `validate_theme_activation_code` é usado para ativar um código de tema.
 - A compra dos temas pagos (Ocean, Autumn, Galaxy, 0,99€) é feita no site (`https://pocketapps.pt/themes.html`); o webhook `stripe-webhook`/`grant_theme_to_user` desbloqueia na conta e a app sincroniza automaticamente.
+- **Brilho por tema (2026-08-09):** a coluna `themes.brightness` (migration `005_theme_brightness.sql`) define o tema claro/escuro por tema — `dark`/`midnight` são escuros, os restantes (`default`, `light`, `forest`, `sunset`, `ocean`, `autumn`, `galaxy`) são claros. `get_user_themes` devolve `brightness` e a app deriva o `themeMode` do tema ativo; o toggle manual foi removido.
 
 ## Agendamento do relatório (pg_cron)
 

@@ -74,6 +74,7 @@ create table if not exists public.themes (
   description text,
   price_cents integer not null default 0,
   seed_color  text not null,
+  brightness  text not null default 'light' check (brightness in ('light', 'dark')),
   is_premium  boolean not null default false,
   is_paid     boolean not null default false,
   is_active   boolean not null default true,
@@ -139,14 +140,14 @@ create policy "Users can view own theme purchases"
 -- ============================================================
 -- SEED DATA: Themes catalog for PocketExpenses
 -- ============================================================
-insert into public.themes (app_name, theme_key, name, description, price_cents, seed_color, is_premium, is_paid, is_active, sort_order) values
-  ('expenses', 'default', 'Default',  'Tema padrão indigo.',           0,  '#6366F1', false, false, true, 1),
-  ('expenses', 'midnight','Midnight', 'Tema escuro elegante.',         0,  '#1E1B4B', true,  false, true, 2),
-  ('expenses', 'forest',  'Forest',   'Tema verde natureza.',          0,  '#22C55E', true,  false, true, 3),
-  ('expenses', 'sunset',  'Sunset',   'Tema quente e vibrante.',       0,  '#F97316', true,  false, true, 4),
-  ('expenses', 'ocean',   'Ocean',    'Tema azul oceano.',             99, '#0EA5E9', false, true,  true, 5),
-  ('expenses', 'autumn',  'Autumn',   'Tema outono quente.',           99, '#EA580C', false, true,  true, 6),
-  ('expenses', 'galaxy',  'Galaxy',   'Tema roxo galáxia.',            99, '#8B5CF6', false, true,  true, 7)
+insert into public.themes (app_name, theme_key, name, description, price_cents, seed_color, brightness, is_premium, is_paid, is_active, sort_order) values
+  ('expenses', 'default', 'Default',  'Tema padrão indigo.',           0,  '#6366F1', 'light', false, false, true, 1),
+  ('expenses', 'midnight','Midnight', 'Tema escuro elegante.',         0,  '#1E1B4B', 'dark',  true,  false, true, 2),
+  ('expenses', 'forest',  'Forest',   'Tema verde natureza.',          0,  '#22C55E', 'light', true,  false, true, 3),
+  ('expenses', 'sunset',  'Sunset',   'Tema quente e vibrante.',       0,  '#F97316', 'light', true,  false, true, 4),
+  ('expenses', 'ocean',   'Ocean',    'Tema azul oceano.',             99, '#0EA5E9', 'light', false, true,  true, 5),
+  ('expenses', 'autumn',  'Autumn',   'Tema outono quente.',           99, '#EA580C', 'light', false, true,  true, 6),
+  ('expenses', 'galaxy',  'Galaxy',   'Tema roxo galáxia.',            99, '#8B5CF6', 'light', false, true,  true, 7)
 on conflict (app_name, theme_key) do nothing;
 
 -- ============================================================
@@ -182,6 +183,7 @@ begin
       'description', t.description,
       'price_cents', t.price_cents,
       'seed_color', t.seed_color,
+      'brightness', t.brightness,
       'is_premium', t.is_premium,
       'is_paid', t.is_paid,
       'sort_order', t.sort_order,

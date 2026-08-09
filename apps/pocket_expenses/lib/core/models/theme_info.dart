@@ -6,6 +6,7 @@ class ThemeInfo {
   final String description;
   final int priceCents;
   final String seedColorHex;
+  final String brightness;
   final bool isPremium;
   final bool isPaid;
   final int sortOrder;
@@ -18,6 +19,7 @@ class ThemeInfo {
     required this.description,
     required this.priceCents,
     required this.seedColorHex,
+    this.brightness = 'light',
     required this.isPremium,
     required this.isPaid,
     required this.sortOrder,
@@ -32,6 +34,7 @@ class ThemeInfo {
       description: json['description'] as String? ?? '',
       priceCents: json['price_cents'] as int? ?? 0,
       seedColorHex: json['seed_color'] as String? ?? '#6366F1',
+      brightness: json['brightness'] as String? ?? 'light',
       isPremium: json['is_premium'] == true,
       isPaid: json['is_paid'] == true,
       sortOrder: json['sort_order'] as int? ?? 0,

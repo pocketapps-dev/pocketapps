@@ -18,16 +18,18 @@ void main() async {
   await initializeDateFormatting('pt_PT');
 
   final prefs = await SharedPreferences.getInstance();
-  final darkMode = prefs.getBool(darkModePrefKey) ?? false;
   final currency = prefs.getString(currencyPrefKey) ?? 'EUR';
   final themeName = prefs.getString(themeNamePrefKey) ?? 'Default';
+  final themeMode = AppTheme.getBrightness(themeName) == Brightness.dark
+      ? ThemeMode.dark
+      : ThemeMode.light;
 
   runApp(
     ProviderScope(
       overrides: [
         themeModeProvider.overrideWith(
           () => ThemeModeNotifier(
-            initial: darkMode ? ThemeMode.dark : ThemeMode.light,
+            initial: themeMode,
           ),
         ),
         themeNameProvider.overrideWith(

@@ -13,13 +13,16 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   @override
   ThemeMode build() => initial;
 
-  Future<void> toggle() async {
-    final next = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-    state = next;
+  Future<void> setMode(ThemeMode mode) async {
+    state = mode;
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(darkModePrefKey, next == ThemeMode.dark);
+    await prefs.setBool(darkModePrefKey, mode == ThemeMode.dark);
   }
+
+  Future<void> toggle() => setMode(
+    state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
+  );
 }
 
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(

@@ -10,8 +10,6 @@ class PreferencesPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == ThemeMode.dark;
     final currency = ref.watch(currencyProvider);
     final currentCurrency = currencyByCode(currency);
     final currentTheme = ref.watch(themeNameProvider);
@@ -24,15 +22,6 @@ class PreferencesPage extends ConsumerWidget {
           Card(
             child: Column(
               children: [
-                SwitchListTile(
-                  secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
-                  title: Text(isDark ? 'Tema Escuro' : 'Tema Claro'),
-                  subtitle: const Text('Persistente neste dispositivo'),
-                  value: isDark,
-                  onChanged: (_) =>
-                      ref.read(themeModeProvider.notifier).toggle(),
-                ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.palette_outlined),
                   title: const Text('Temas'),

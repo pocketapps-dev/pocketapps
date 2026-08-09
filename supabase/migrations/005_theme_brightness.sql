@@ -1,0 +1,95 @@
+-- ============================================================
+-- 005: Per-theme brightness (light/dark)
+-- ============================================================
+
+alter table public.themes
+  add column if not exists brightness text;
+
+update public.themes
+  set brightness = case
+    when theme_key in ('dark', 'midnight') then 'dark'
+    else 'light'
+  end
+  where brightness is null;
+
+alter table public.themes
+  alter column brightness set default 'light',
+  alter column brightness set not null;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'themes_brightness_check'
+  ) then
+    alter table public.themes
+      add constraint themes_brightness_check
+      check (brightness in ('light', 'dark'));
+  end if;
+end $$;
+
+create or replace function public.get_user_themes(p_app_name text)
+returns jsonb as $$
+declare
+  v_user_id uuid;
+  v_has_premium boolean;
+  v_result jsonb;
+begin
+  v_user_id := auth.uid();
+  if v_user_id is null then
+    return jsonb_build_object('error', 'Not authenticated');
+  end if;
+
+  select exists(
+    select 1 from public.subscriptions
+    where user_id = v_user_id
+      and app_name = p_app_name
+      and plan in ('premium', 'founder')
+      and status = 'active'
+      and (ends_at is null or ends_at > now())
+  ) into v_has_premium;
+
+  select jsonb_agg(
+    jsonb_build_object(
+      'theme_key', t.theme_key,
+      'name', t.name,
+      'description', t.description,
+      'price_cents', t.price_cents,
+      'seed_color', t.seed_color,
+      'brightness', t.brightness,
+      'is_premium', t.is_premium,
+      'is_paid', t.is_paid,
+      'sort_order', t.sort_order,
+      'available',
+        case
+          when not t.is_premium and not t.is_paid then true
+          when t.is_premium and v_has_premium then true
+          when t.is_paid and exists(
+            select 1 from public.user_themes ut
+            where ut.user_id = v_user_id
+              and ut.app_name = p_app_name
+              and ut.theme_key = t.theme_key
+          ) then true
+          else false
+        end,
+      'purchased',
+        exists(
+          select 1 from public.user_themes ut
+          where ut.user_id = v_user_id
+            and ut.app_name = p_app_name
+            and ut.theme_key = t.theme_key
+        )
+    )
+    order by t.sort_order
+  )
+  into v_result
+  from public.themes t
+  where t.app_name = p_app_name
+    and t.is_active = true;
+
+  return coalesce(v_result, '[]'::jsonb);
+end;
+$$ language plpgsql security definer;
+
+revoke execute on function public.get_user_themes(text) from public;
+grant execute on function public.get_user_themes(text) to authenticated;

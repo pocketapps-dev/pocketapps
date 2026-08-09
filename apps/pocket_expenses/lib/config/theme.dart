@@ -96,6 +96,16 @@ class AppTheme {
     return _baseTheme(brightness, seedColor);
   }
 
+  static Brightness getBrightness(String themeName) {
+    switch (themeName.toLowerCase()) {
+      case 'dark':
+      case 'midnight':
+        return Brightness.dark;
+      default:
+        return Brightness.light;
+    }
+  }
+
   static List<String> get availableThemes => [
     'Default',
     'Midnight',
