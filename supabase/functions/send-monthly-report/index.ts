@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import nodemailer from "npm:nodemailer@6.9.16";
+import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,7 +10,7 @@ const corsHeaders = {
 
 const APP = { name: "PocketExpenses", color: "#6366F1" };
 
-async function sendSmtpEmail(to: string, subject: string, html: string): Promise<boolean> {
+async function sendSmtpEmail(to: string, subject: string, html: string, attachments: any[] = []): Promise<boolean> {
   const host = Deno.env.get("SMTP_HOST") || "smtp-relay.brevo.com";
   const port = parseInt(Deno.env.get("SMTP_PORT") || "587");
   const user = Deno.env.get("SMTP_USER") || "";
@@ -31,7 +32,7 @@ async function sendSmtpEmail(to: string, subject: string, html: string): Promise
   });
 
   try {
-    await transporter.sendMail({ from, to, replyTo, subject, html });
+    await transporter.sendMail({ from, to, replyTo, subject, html, attachments });
     console.log(`[EMAIL] Enviado para ${to}`);
     return true;
   } catch (error) {
@@ -94,7 +95,7 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
   let recurring = 0;
   let unique = 0;
   let count = 0;
-  const byCategory = new Map<string, number>();
+  const byCategory = new Map<string, { amount: number; color: string }>();
   const items: { name: string; amount: number; type: string; category: string; when: string }[] = [];
 
   const start = new Date(monthStart);
@@ -136,7 +137,11 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
     else unique += amt;
     const cat = catById.get(e.category_id);
     const catName = cat?.name || "Sem Categoria";
-    byCategory.set(catName, (byCategory.get(catName) || 0) + amt);
+    const prev = byCategory.get(catName);
+    byCategory.set(catName, {
+      amount: (prev?.amount || 0) + amt,
+      color: cat?.color_hex || "#6366F1",
+    });
     items.push({
       name: e.name,
       amount: amt,
@@ -148,7 +153,7 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
     });
   }
 
-  const sortedCat = [...byCategory.entries()].sort((a, b) => b[1] - a[1]);
+  const sortedCat = [...byCategory.entries()].sort((a, b) => b[1].amount - a[1].amount);
   const sortedItems = items.sort((a, b) => b.amount - a.amount);
   console.log(`[REPORT] RESULT total=${total} recurring=${recurring} unique=${unique} count=${count} items=${items.length}`);
   return { total, recurring, unique, count, byCategory: sortedCat, items: sortedItems };
@@ -236,14 +241,39 @@ function buildSimpleReportHtml(userName: string, data: any, monthStart: Date, un
   );
 }
 
+function buildSplitBarHtml(data: any): string {
+  const total = data.total > 0 ? data.total : 1;
+  const recPct = Math.round((data.recurring / total) * 100);
+  const uniPct = 100 - recPct;
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0 0;">
+    <tr>
+      <td style="color:#374151; font-size:13px; padding-bottom:6px;">Recorrentes vs únicas</td>
+    </tr>
+    <tr>
+      <td style="background-color:#e5e7eb; border-radius:6px;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td width="${recPct}%" style="background-color:${APP.color}; height:12px; border-radius:6px 0 0 6px;"></td>
+          <td width="${uniPct}%" style="background-color:#10B981; height:12px; border-radius:0 6px 6px 0;"></td>
+        </tr></table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding-top:8px; font-size:12px; color:#6b7280;">
+        <span style="color:${APP.color};">■</span> Recorrentes ${money(data.recurring)} &nbsp;&nbsp;&nbsp;
+        <span style="color:#10B981;">■</span> Únicas ${money(data.unique)}
+      </td>
+    </tr>
+  </table>`;
+}
+
 function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, unsubscribeUrl: string): string {
   const label = monthLabel(monthStart);
-  const max = data.byCategory.length ? data.byCategory[0][1] : 1;
+  const max = data.byCategory.length ? data.byCategory[0][1].amount : 1;
 
   const categoriesHtml = includeCategories
     ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
        ${data.byCategory
-         .map(([name, amt]: [string, number]) => {
+         .map(([name, { amount: amt }]: [string, { amount: number; color: string }]) => {
            const pct = max > 0 ? Math.round((amt / max) * 100) : 0;
            return `<tr>
              <td style="padding:6px 0; color:#374151; font-size:14px; width:45%;">${name}</td>
@@ -256,18 +286,22 @@ function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, 
     : "";
 
   const chartsHtml = includeCharts
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0 0;">
-        <tr>
-          <td style="width:50%; text-align:center;">
-            <div style="font-size:24px; font-weight:700; color:${APP.color};">${money(data.total)}</div>
-            <div style="color:#6b7280; font-size:12px; margin-top:4px;">Total do mês</div>
-          </td>
-          <td style="width:50%; text-align:center;">
-            <div style="font-size:24px; font-weight:700; color:#10B981;">${data.byCategory.length}</div>
-            <div style="color:#6b7280; font-size:12px; margin-top:4px;">Categorias usadas</div>
-          </td>
-        </tr>
-      </table>`
+    ? `<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Gráficos</h3>
+       <table width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 0 0;">
+         ${data.byCategory.length === 0
+           ? `<tr><td style="color:#9ca3af; font-size:13px; padding:8px 0;">Sem despesas neste mês.</td></tr>`
+           : data.byCategory
+               .map(([name, { amount: amt, color }]: [string, { amount: number; color: string }]) => {
+                 const pct = max > 0 ? Math.round((amt / max) * 100) : 0;
+                 return `<tr>
+                   <td style="padding:5px 0; color:#374151; font-size:13px; width:38%;">${name}</td>
+                   <td style="padding:5px 0; width:46%;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="background-color:#e5e7eb; border-radius:4px;"><table width="${pct}%" cellpadding="0" cellspacing="0"><tr><td style="background-color:${color}; height:10px; border-radius:4px;"></td></tr></table></td></tr></table></td>
+                   <td style="padding:5px 0; text-align:right; color:#111827; font-size:13px; font-weight:600; width:16%;">${money(amt)}</td>
+                 </tr>`;
+               })
+               .join("")}
+       </table>
+       ${data.byCategory.length > 0 ? buildSplitBarHtml(data) : ""}`
     : "";
 
   const bodyHtml = `${chartsHtml}${statsRowsHtml(data)}<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Por categoria</h3>${categoriesHtml}<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Despesas do mês</h3>${buildExpensesTableHtml(data.items)}`;
@@ -277,6 +311,159 @@ function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, 
     bodyHtml,
     unsubscribeUrl,
   );
+}
+
+function pdfSafe(text: string): string {
+  return String(text ?? "")
+    .replace(/[–—]/g, "-")
+    .replace(/[’‘]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/·/g, "-")
+    .replace(/…/g, "...")
+    .replace(/[^\x00-\xFF\u20AC]/g, "");
+}
+
+function hexToRgb(hex: string): any {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+}
+
+async function buildReportPdf(opts: {
+  userName: string;
+  data: any;
+  monthStart: Date;
+  reportType: string;
+  includeCategories: boolean;
+  includeCharts: boolean;
+}): Promise<Uint8Array> {
+  const { userName, data, monthStart, reportType, includeCategories, includeCharts } = opts;
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const pageWidth = 595.28;
+  const pageHeight = 841.89;
+  const margin = 50;
+  const primary = rgb(0.388, 0.4, 0.945);
+  const textDark = rgb(0.067, 0.094, 0.153);
+  const textGray = rgb(0.42, 0.45, 0.5);
+  const lightBg = rgb(0.976, 0.98, 0.984);
+  const lineColor = rgb(0.898, 0.91, 0.918);
+  const green = rgb(0.063, 0.725, 0.506);
+  const white = rgb(1, 1, 1);
+
+  let page = doc.addPage([pageWidth, pageHeight]);
+  let y = pageHeight - 40;
+
+  const ensureSpace = (needed: number): void => {
+    if (y - needed < margin) {
+      page = doc.addPage([pageWidth, pageHeight]);
+      y = pageHeight - 40;
+    }
+  };
+
+  const sectionTitle = (text: string): void => {
+    ensureSpace(32);
+    page.drawText(text, { x: margin, y, size: 15, font: bold, color: textDark });
+    y -= 22;
+  };
+
+  const drawFitText = (text: string, x: number, baseY: number, maxWidth: number, size: number, color: any, f: any = font): void => {
+    let s = size;
+    while (s > 6 && f.widthOfTextAtSize(text, s) > maxWidth) s -= 0.5;
+    page.drawText(text, { x, y: baseY, size: s, font: f, color });
+  };
+
+  page.drawRectangle({ x: 0, y: pageHeight - 80, width: pageWidth, height: 80, color: primary });
+  page.drawText("PocketExpenses", { x: margin, y: pageHeight - 52, size: 22, font: bold, color: white });
+
+  y = pageHeight - 130;
+  page.drawText(`Relatório de ${pdfSafe(monthLabel(monthStart))}`, { x: margin, y, size: 20, font: bold, color: textDark });
+  y -= 26;
+  page.drawText(`Olá ${pdfSafe(userName)}, aqui está o resumo das tuas despesas.`, { x: margin, y, size: 12, font, color: textGray });
+  y -= 28;
+
+  const stats = [
+    { v: money(data.total), l: "Total" },
+    { v: money(data.recurring), l: "Recorrentes" },
+    { v: money(data.unique), l: "Únicas" },
+    { v: String(data.count), l: "Despesas" },
+  ];
+  const gap = 12;
+  const boxW = (pageWidth - margin * 2 - gap * 3) / 4;
+  const boxH = 56;
+  ensureSpace(boxH + 24);
+  stats.forEach((s, i) => {
+    const x = margin + i * (boxW + gap);
+    page.drawRectangle({ x, y: y - boxH, width: boxW, height: boxH, color: lightBg, borderColor: lineColor, borderWidth: 1 });
+    drawFitText(pdfSafe(s.v), x + 8, y - 30, boxW - 16, 13, textDark, bold);
+    page.drawText(s.l, { x: x + 8, y: y - 14, size: 9, font, color: textGray });
+  });
+  y -= boxH + 26;
+
+  const drawCatBars = (withColors: boolean): void => {
+    const maxAmt = data.byCategory.length ? data.byCategory[0][1].amount : 1;
+    const barX = margin + 180;
+    const barMaxW = 250;
+    for (const [name, { amount: amt, color: hex }] of data.byCategory) {
+      ensureSpace(24);
+      drawFitText(pdfSafe(name), margin, y, 170, 11, textDark);
+      const w = maxAmt > 0 ? Math.max((amt / maxAmt) * barMaxW, 3) : 3;
+      page.drawRectangle({ x: barX, y: y - 4, width: barMaxW, height: 12, color: lineColor });
+      page.drawRectangle({ x: barX, y: y - 4, width: w, height: 12, color: withColors ? (hexToRgb(hex) || primary) : primary });
+      drawFitText(money(amt), barX + barMaxW + 10, y, 80, 11, textDark, bold);
+      y -= 24;
+    }
+  };
+
+  if (includeCharts && data.byCategory.length > 0) {
+    sectionTitle("Gráficos");
+    drawCatBars(true);
+    ensureSpace(50);
+    y -= 8;
+    page.drawText("Recorrentes vs únicas", { x: margin, y, size: 11, font: bold, color: textDark });
+    y -= 20;
+    const total = data.total > 0 ? data.total : 1;
+    const barW = pageWidth - margin * 2;
+    const recW = (data.recurring / total) * barW;
+    page.drawRectangle({ x: margin, y: y - 4, width: barW, height: 14, color: lineColor });
+    page.drawRectangle({ x: margin, y: y - 4, width: recW, height: 14, color: primary });
+    page.drawRectangle({ x: margin + recW, y: y - 4, width: barW - recW, height: 14, color: green });
+    y -= 26;
+    page.drawText(`■ ${money(data.recurring)} Recorrentes      ■ ${money(data.unique)} Únicas`, { x: margin, y, size: 10, font, color: textGray });
+    y -= 16;
+  }
+
+  if (reportType === "detailed" && includeCategories && data.byCategory.length > 0) {
+    sectionTitle("Por categoria");
+    drawCatBars(false);
+  }
+
+  if (reportType === "detailed" && data.items.length > 0) {
+    sectionTitle("Despesas do mês");
+    ensureSpace(24);
+    page.drawText("Despesa", { x: margin, y, size: 10, font: bold, color: textGray });
+    page.drawText("Categoria", { x: margin + 200, y, size: 10, font: bold, color: textGray });
+    page.drawText("Tipo", { x: margin + 320, y, size: 10, font: bold, color: textGray });
+    page.drawText("Valor", { x: pageWidth - margin - 80, y, size: 10, font: bold, color: textGray });
+    y -= 12;
+    page.drawLine({ start: { x: margin, y }, end: { x: pageWidth - margin, y }, thickness: 0.5, color: lineColor });
+    y -= 16;
+    for (const it of data.items) {
+      ensureSpace(22);
+      drawFitText(pdfSafe(it.name), margin, y, 190, 11, textDark);
+      drawFitText(pdfSafe(it.category), margin + 200, y, 110, 10, textGray);
+      drawFitText(pdfSafe(it.type === "recurring" ? `Recorrente${it.when ? " · " + it.when : ""}` : `Única${it.when ? " · " + it.when : ""}`), margin + 320, y, 120, 10, textGray);
+      drawFitText(pdfSafe(money(it.amount)), pageWidth - margin - 80, y, 80, 11, textDark, bold);
+      y -= 20;
+    }
+  }
+
+  for (const p of doc.getPages()) {
+    p.drawText("PocketApps · Relatório gerado automaticamente.", { x: margin, y: 30, size: 9, font, color: textGray });
+  }
+  return doc.save();
 }
 
 serve(async (req: Request) => {
@@ -377,7 +564,27 @@ serve(async (req: Request) => {
       const html = reportType === "simple"
         ? buildSimpleReportHtml(userName, data, monthStart, unsubscribeUrl)
         : buildDetailedReportHtml(userName, data, monthStart, includeCategories, includeCharts, unsubscribeUrl);
-      const ok = await sendSmtpEmail(t.email, subject, html);
+
+      const attachments: any[] = [];
+      try {
+        const pdfBytes = await buildReportPdf({
+          userName,
+          data,
+          monthStart,
+          reportType,
+          includeCategories,
+          includeCharts,
+        });
+        attachments.push({
+          filename: `relatorio-${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}.pdf`,
+          content: pdfBytes,
+          contentType: "application/pdf",
+        });
+      } catch (error) {
+        console.error(`[PDF] Erro ao gerar PDF para ${t.user_id}:`, error);
+      }
+
+      const ok = await sendSmtpEmail(t.email, subject, html, attachments);
       results.push(`${t.user_id}:${reportType}:${ok ? "sent" : "failed"}`);
       if (isTest) {
         testData.push({

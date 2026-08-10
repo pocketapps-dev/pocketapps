@@ -36,14 +36,25 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
       if (!mounted) return;
       final prefs = next.value;
       if (prefs == null) return;
-      setState(() {
-        _enabled = prefs['email_reports_enabled'] as bool? ?? false;
-        _day = prefs['report_day'] as int? ?? 1;
-        _hour = prefs['report_hour'] as int? ?? 9;
-        _reportType = prefs['report_type'] as String? ?? 'detailed';
-        _includeCategories = prefs['include_categories'] as bool? ?? true;
-        _includeCharts = prefs['include_charts'] as bool? ?? true;
-      });
+      _applyPrefs(prefs);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final cached = ref.read(reportPreferencesProvider).value;
+    if (cached != null) _applyPrefs(cached);
+  }
+
+  void _applyPrefs(Map<String, dynamic> prefs) {
+    setState(() {
+      _enabled = prefs['email_reports_enabled'] as bool? ?? false;
+      _day = prefs['report_day'] as int? ?? 1;
+      _hour = prefs['report_hour'] as int? ?? 9;
+      _reportType = prefs['report_type'] as String? ?? 'detailed';
+      _includeCategories = prefs['include_categories'] as bool? ?? true;
+      _includeCharts = prefs['include_charts'] as bool? ?? true;
     });
   }
 

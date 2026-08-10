@@ -112,9 +112,16 @@ O **Supabase Auth** (email de confirmação, magic link/OTP do site, reset de pa
 Controlado por `report_preferences.report_type`:
 
 - `simple` — cabeçalho + linha de estatísticas (Total/Recorrentes/Únicas/Despesas) + CTA; sem categorias nem gráficos.
-- `detailed` (padrão) — além das estatísticas, quebra por categoria (barras HTML), se `include_charts` os indicadores do mês, e desde 2026-08-10 a **lista "Despesas do mês"** (cada despesa do mês: nome, categoria, tipo + quando, valor — ordenada por valor decrescente, com nomes/categorias escapados).
+- `detailed` (padrão) — além das estatísticas, quebra por categoria (barras HTML), se `include_charts` os **gráficos** (barras por categoria com a cor de cada categoria + barra "Recorrentes vs únicas"), e desde 2026-08-10 a **lista "Despesas do mês"** (cada despesa do mês: nome, categoria, tipo + quando, valor — ordenada por valor decrescente, com nomes/categorias escapados).
 
 Precedência na função: `body.report_type` → `report_preferences.report_type` → `'detailed'`. A app grava com `report_type` no upsert de `report_preferences` (`report_provider.dart` usa `'detailed'` como fallback). Migration `002_report_type.sql` adiciona a coluna com `add column if not exists`, mantendo `detailed` para preferências existentes.
+
+### PDF em anexo (2026-08-10)
+
+- O email passa a incluir um **PDF em anexo** (`relatorio-AAAA-MM.pdf`), gerado com `pdf-lib` (via `esm.sh`, corre nativamente em Deno) — contém cabeçalho, estatísticas, gráficos (se `include_charts`), categorias e despesas do mês.
+- O PDF só usa fontes standard (Helvetica) e caracteres Latin-1 (função `pdfSafe`); valores em EUR via `money()`.
+- A geração falha graciosamente: se o PDF der erro, o email segue sem anexo (log `[PDF] ...`).
+- **Persistência dos toggles na app (2026-08-10):** `report_settings_page.dart` agora lê o valor em cache no `initState` (`ref.read(...).value`) antes de registar o `ref.listen` — antes, ao reabrir a página, o listener não disparava com o valor já em cache e os toggles voltavam aos defaults em vez da escolha guardada. Nota: o Riverpod 3.3.2 não tem `fireImmediately` no `ref.listen` (só `onError`/`weak`), daí a leitura explícita no `initState`.
 
 ### Relatório de teste — escolha do mês (2026-08-10)
 
