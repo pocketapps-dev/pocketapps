@@ -266,45 +266,71 @@ function buildSplitBarHtml(data: any): string {
   </table>`;
 }
 
+function buildChartsHtml(data: any): string {
+  if (data.byCategory.length === 0) {
+    return `<h3 style="color:#111827; font-size:16px; margin:28px 0 8px 0;">Gráficos</h3>
+      <p style="color:#9ca3af; font-size:13px; margin:0;">Sem despesas neste mês.</p>`;
+  }
+
+  const total = data.total > 0 ? data.total : 1;
+  let acc = 0;
+  const stops = data.byCategory
+    .map(([name, { amount, color }]: [string, { amount: number; color: string }]) => {
+      const from = acc;
+      acc += (amount / total) * 100;
+      return `${color} ${from.toFixed(2)}% ${acc.toFixed(2)}%`;
+    })
+    .join(", ");
+
+  const legend = data.byCategory
+    .map(([name, { amount, color }]: [string, { amount: number; color: string }]) => {
+      const pct = total > 0 ? Math.round((amount / total) * 100) : 0;
+      return `<tr>
+        <td style="padding:4px 0; width:18px;"><div style="width:12px; height:12px; background-color:${color}; border-radius:3px;"></div></td>
+        <td style="padding:4px 8px; color:#374151; font-size:13px;">${name}</td>
+        <td style="padding:4px 0; text-align:right; color:#111827; font-size:13px; font-weight:600;">${money(amount)}</td>
+        <td style="padding:4px 0 4px 12px; text-align:right; color:#9ca3af; font-size:12px; width:44px;">${pct}%</td>
+      </tr>`;
+    })
+    .join("");
+
+  return `<h3 style="color:#111827; font-size:16px; margin:28px 0 8px 0;">Gráficos</h3>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 0 0;">
+      <tr>
+        <td width="220" align="center" valign="middle">
+          <table width="190" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:190px; height:190px; border-radius:50%; background-color:#e5e7eb; background: conic-gradient(${stops});">
+            <table width="112" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:112px; height:112px; border-radius:50%; background-color:#ffffff;">
+              <div style="font-size:15px; font-weight:700; color:#111827; line-height:1.3;">${money(data.total)}</div>
+              <div style="color:#6b7280; font-size:11px; margin-top:2px;">Total</div>
+            </td></tr></table>
+          </td></tr></table>
+        </td>
+        <td style="padding-left:16px; vertical-align:middle;">
+          <table width="100%" cellpadding="0" cellspacing="0">${legend}</table>
+        </td>
+      </tr>
+    </table>
+    ${buildSplitBarHtml(data)}`;
+}
+
 function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, unsubscribeUrl: string): string {
   const label = monthLabel(monthStart);
-  const max = data.byCategory.length ? data.byCategory[0][1].amount : 1;
 
-  const categoriesHtml = includeCategories
+  const categoriesHtml = includeCategories && data.byCategory.length > 0
     ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
        ${data.byCategory
-         .map(([name, { amount: amt }]: [string, { amount: number; color: string }]) => {
-           const pct = max > 0 ? Math.round((amt / max) * 100) : 0;
-           return `<tr>
-             <td style="padding:6px 0; color:#374151; font-size:14px; width:45%;">${name}</td>
-             <td style="width:35%; padding:6px 0;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="background-color:#e5e7eb; border-radius:4px;"><table width="${pct}%" cellpadding="0" cellspacing="0"><tr><td style="background-color:${APP.color}; height:8px; border-radius:4px;"></td></tr></table></td></tr></table></td>
+         .map(([name, { amount: amt }]: [string, { amount: number; color: string }]) => `
+           <tr>
+             <td style="padding:6px 0; color:#374151; font-size:14px;">${name}</td>
              <td style="padding:6px 0; text-align:right; color:#111827; font-size:14px; font-weight:600;">${money(amt)}</td>
-           </tr>`;
-         })
+           </tr>`)
          .join("")}
      </table>`
     : "";
 
-  const chartsHtml = includeCharts
-    ? `<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Gráficos</h3>
-       <table width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 0 0;">
-         ${data.byCategory.length === 0
-           ? `<tr><td style="color:#9ca3af; font-size:13px; padding:8px 0;">Sem despesas neste mês.</td></tr>`
-           : data.byCategory
-               .map(([name, { amount: amt, color }]: [string, { amount: number; color: string }]) => {
-                 const pct = max > 0 ? Math.round((amt / max) * 100) : 0;
-                 return `<tr>
-                   <td style="padding:5px 0; color:#374151; font-size:13px; width:38%;">${name}</td>
-                   <td style="padding:5px 0; width:46%;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="background-color:#e5e7eb; border-radius:4px;"><table width="${pct}%" cellpadding="0" cellspacing="0"><tr><td style="background-color:${color}; height:10px; border-radius:4px;"></td></tr></table></td></tr></table></td>
-                   <td style="padding:5px 0; text-align:right; color:#111827; font-size:13px; font-weight:600; width:16%;">${money(amt)}</td>
-                 </tr>`;
-               })
-               .join("")}
-       </table>
-       ${data.byCategory.length > 0 ? buildSplitBarHtml(data) : ""}`
-    : "";
+  const chartsHtml = includeCharts ? buildChartsHtml(data) : "";
 
-  const bodyHtml = `${chartsHtml}${statsRowsHtml(data)}<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Por categoria</h3>${categoriesHtml}<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Despesas do mês</h3>${buildExpensesTableHtml(data.items)}`;
+  const bodyHtml = `${statsRowsHtml(data)}<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Por categoria</h3>${categoriesHtml}<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Despesas do mês</h3>${buildExpensesTableHtml(data.items)}${chartsHtml}`;
   return buildShellHtml(
     `Relatório de ${label}`,
     `Olá ${userName}, aqui está o resumo das tuas despesas.`,
@@ -328,6 +354,26 @@ function hexToRgb(hex: string): any {
   if (!m) return null;
   const n = parseInt(m[1], 16);
   return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+}
+
+function donutSvgSegments(data: any, cx: number, cy: number, R: number, r: number): string[] {
+  const total = data.total > 0 ? data.total : 1;
+  let acc = -Math.PI / 2;
+  const paths: string[] = [];
+  for (const [name, { amount }] of data.byCategory) {
+    const seg = (amount / total) * 2 * Math.PI;
+    const from = acc;
+    const to = acc + seg;
+    const largeArc = seg > Math.PI ? 1 : 0;
+    const p0 = [cx + R * Math.cos(from), cy + R * Math.sin(from)];
+    const p1 = [cx + r * Math.cos(from), cy + r * Math.sin(from)];
+    const p2 = [cx + r * Math.cos(to), cy + r * Math.sin(to)];
+    const p3 = [cx + R * Math.cos(to), cy + R * Math.sin(to)];
+    const path = `M ${p0[0]} ${p0[1]} L ${p1[0]} ${p1[1]} A ${r} ${r} 0 ${largeArc} 1 ${p2[0]} ${p2[1]} L ${p3[0]} ${p3[1]} A ${R} ${R} 0 ${largeArc} 0 ${p0[0]} ${p0[1]} Z`;
+    paths.push(path);
+    acc = to;
+  }
+  return paths;
 }
 
 async function buildReportPdf(opts: {
@@ -402,42 +448,24 @@ async function buildReportPdf(opts: {
   });
   y -= boxH + 26;
 
-  const drawCatBars = (withColors: boolean): void => {
-    const maxAmt = data.byCategory.length ? data.byCategory[0][1].amount : 1;
-    const barX = margin + 180;
-    const barMaxW = 250;
-    for (const [name, { amount: amt, color: hex }] of data.byCategory) {
-      ensureSpace(24);
-      drawFitText(pdfSafe(name), margin, y, 170, 11, textDark);
-      const w = maxAmt > 0 ? Math.max((amt / maxAmt) * barMaxW, 3) : 3;
-      page.drawRectangle({ x: barX, y: y - 4, width: barMaxW, height: 12, color: lineColor });
-      page.drawRectangle({ x: barX, y: y - 4, width: w, height: 12, color: withColors ? (hexToRgb(hex) || primary) : primary });
-      drawFitText(money(amt), barX + barMaxW + 10, y, 80, 11, textDark, bold);
-      y -= 24;
+  const drawCategoryList = (): void => {
+    ensureSpace(24);
+    page.drawText("Categoria", { x: margin, y, size: 10, font: bold, color: textGray });
+    page.drawText("Valor", { x: pageWidth - margin - 80, y, size: 10, font: bold, color: textGray });
+    y -= 12;
+    page.drawLine({ start: { x: margin, y }, end: { x: pageWidth - margin, y }, thickness: 0.5, color: lineColor });
+    y -= 16;
+    for (const [name, { amount: amt }] of data.byCategory) {
+      ensureSpace(22);
+      drawFitText(pdfSafe(name), margin, y, pageWidth - margin * 2 - 90, 11, textDark);
+      drawFitText(pdfSafe(money(amt)), pageWidth - margin - 80, y, 80, 11, textDark, bold);
+      y -= 20;
     }
   };
 
-  if (includeCharts && data.byCategory.length > 0) {
-    sectionTitle("Gráficos");
-    drawCatBars(true);
-    ensureSpace(50);
-    y -= 8;
-    page.drawText("Recorrentes vs únicas", { x: margin, y, size: 11, font: bold, color: textDark });
-    y -= 20;
-    const total = data.total > 0 ? data.total : 1;
-    const barW = pageWidth - margin * 2;
-    const recW = (data.recurring / total) * barW;
-    page.drawRectangle({ x: margin, y: y - 4, width: barW, height: 14, color: lineColor });
-    page.drawRectangle({ x: margin, y: y - 4, width: recW, height: 14, color: primary });
-    page.drawRectangle({ x: margin + recW, y: y - 4, width: barW - recW, height: 14, color: green });
-    y -= 26;
-    page.drawText(`■ ${money(data.recurring)} Recorrentes      ■ ${money(data.unique)} Únicas`, { x: margin, y, size: 10, font, color: textGray });
-    y -= 16;
-  }
-
   if (reportType === "detailed" && includeCategories && data.byCategory.length > 0) {
     sectionTitle("Por categoria");
-    drawCatBars(false);
+    drawCategoryList();
   }
 
   if (reportType === "detailed" && data.items.length > 0) {
@@ -458,6 +486,49 @@ async function buildReportPdf(opts: {
       drawFitText(pdfSafe(money(it.amount)), pageWidth - margin - 80, y, 80, 11, textDark, bold);
       y -= 20;
     }
+  }
+
+  if (includeCharts && data.byCategory.length > 0) {
+    const legendRows = data.byCategory.length;
+    ensureSpace(220 + legendRows * 17);
+    sectionTitle("Gráficos");
+
+    const cx = margin + 80;
+    const cy2 = y - 100;
+    const R = 70;
+    const r = 40;
+    const segments = donutSvgSegments(data, cx, cy2, R, r);
+    for (let i = 0; i < segments.length; i++) {
+      const hex = data.byCategory[i][1].color;
+      page.drawSvgPath(segments[i], { color: hexToRgb(hex) || primary, borderColor: white, borderWidth: 2 });
+    }
+    drawFitText(pdfSafe(money(data.total)), cx - 40, cy2 - 6, 80, 12, textDark, bold);
+
+    let ly = cy2 + 36;
+    for (const [name, { amount: amt, color: hex }] of data.byCategory) {
+      page.drawRectangle({ x: cx + R + 24, y: ly - 9, width: 10, height: 10, color: hexToRgb(hex) || primary });
+      drawFitText(pdfSafe(name), cx + R + 40, ly, 130, 10, textDark);
+      drawFitText(pdfSafe(money(amt)), cx + R + 170, ly, 70, 10, textDark, bold);
+      ly -= 17;
+    }
+    y = Math.min(cy2 - R - 24, ly - 8);
+
+    ensureSpace(70);
+    page.drawText("Recorrentes vs únicas", { x: margin, y, size: 11, font: bold, color: textDark });
+    y -= 20;
+    const total = data.total > 0 ? data.total : 1;
+    const barW = pageWidth - margin * 2;
+    const recW = (data.recurring / total) * barW;
+    page.drawRectangle({ x: margin, y: y - 4, width: barW, height: 14, color: lineColor });
+    page.drawRectangle({ x: margin, y: y - 4, width: recW, height: 14, color: primary });
+    page.drawRectangle({ x: margin + recW, y: y - 4, width: barW - recW, height: 14, color: green });
+    y -= 26;
+    const legendY = y;
+    page.drawRectangle({ x: margin, y: legendY - 7, width: 9, height: 9, color: primary });
+    drawFitText(`Recorrentes ${pdfSafe(money(data.recurring))}`, margin + 14, legendY, 150, 10, textGray);
+    page.drawRectangle({ x: margin + 175, y: legendY - 7, width: 9, height: 9, color: green });
+    drawFitText(`Únicas ${pdfSafe(money(data.unique))}`, margin + 189, legendY, 150, 10, textGray);
+    y -= 16;
   }
 
   for (const p of doc.getPages()) {
