@@ -67,6 +67,15 @@ class AppTheme {
     );
   }
 
+  static String normalizeThemeName(String themeName) {
+    switch (themeName.toLowerCase()) {
+      case 'default':
+        return 'Light';
+      default:
+        return themeName;
+    }
+  }
+
   static ThemeData getTheme(String themeName, Brightness brightness) {
     final seedColor = _getSeedColor(themeName);
     return _baseTheme(brightness, seedColor);
@@ -107,7 +116,6 @@ class AppTheme {
   }
 
   static List<String> get availableThemes => [
-    'Default',
     'Midnight',
     'Forest',
     'Sunset',
@@ -116,6 +124,6 @@ class AppTheme {
     'Galaxy',
   ];
 
-  static ThemeData get lightTheme => getTheme('default', Brightness.light);
-  static ThemeData get darkTheme => getTheme('default', Brightness.dark);
+  static ThemeData get lightTheme => getTheme('light', Brightness.light);
+  static ThemeData get darkTheme => getTheme('dark', Brightness.dark);
 }

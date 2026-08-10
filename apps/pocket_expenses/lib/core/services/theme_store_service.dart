@@ -19,7 +19,10 @@ class ThemeStoreService {
     final themes = response
         .map((e) => ThemeInfo.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
-    themes.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    themes.sort((a, b) {
+      if (a.available != b.available) return b.available ? 1 : -1;
+      return a.sortOrder.compareTo(b.sortOrder);
+    });
     return themes;
   }
 

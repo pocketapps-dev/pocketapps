@@ -1,7 +1,7 @@
 # PocketApps — Estado Global do Projeto
 
 > Resumo completo do monorepo: o que existe, o que está em progresso e o que falta.
-> Atualizado em 2026-08-09.
+> Atualizado em 2026-08-10.
 
 ## 1. Visão geral
 
@@ -25,7 +25,7 @@ packages/
   pocketapps_auth/        → Auth partilhada (Supabase + Google)
 supabase/
   schema.sql              → Fonte de verdade do schema (todas as apps)
-  migrations/             → 001_themes.sql, 002_report_type.sql, 003_founder_count.sql, 004_light_dark_themes.sql, 005_theme_brightness.sql
+  migrations/             → 001_themes.sql, 002_report_type.sql, 003_founder_count.sql, 004_light_dark_themes.sql, 005_theme_brightness.sql, 006_remove_default_theme.sql
   functions/              → 5 Edge Functions (Deno)
 docs/
   auth.md                 → Autenticação (Supabase Auth + Google, setup no dashboard)
@@ -52,7 +52,7 @@ TODO.md                   → Tarefas A/B/C concluídas
 **pocket_expenses** (app principal):
 - Auth Supabase (email/password + Google) com fluxo completo (callback, reset password, mudar email/password, apagar conta).
 - Gestão de despesas recorrentes/únicas, categorias, resumo mensal, calendário, temas.
-- **Loja de temas (2026-08-04)**: página `/settings/themes` alimentada pelo RPC `get_user_themes` — secções Grátis (Default) / Premium (Midnight, Forest, Sunset) / Pagos (Ocean, Autumn, Galaxy 0,99€, compra no site `themes.html`) + ativação de código de tema. Desde 2026-08-09 cada tema define a luminosidade da app (light/dark).
+- **Loja de temas (2026-08-04)**: página `/settings/themes` alimentada pelo RPC `get_user_themes` — secções Grátis (Light, Dark) / Premium (Midnight, Forest, Sunset) / Pagos (Ocean, Autumn, Galaxy 0,99€, compra no site `themes.html`) + ativação de código de tema. Desde 2026-08-09 cada tema define a luminosidade da app (light/dark) e o tema `default` foi removido (migration `006_remove_default_theme.sql`).
 - Relatórios mensais por email (`report_settings_page` + `report_provider`/`report_service`).
 - Plataformas de destino: Android (APK gerado em CI). `version: 1.0.0+1`.
 
@@ -81,6 +81,8 @@ TODO.md                   → Tarefas A/B/C concluídas
 | `003_founder_count.sql` | RPC pública `get_founder_count()` | ✅ No schema (`supabase/schema.sql`) |
 | `004_light_dark_themes.sql` | Temas gratuitos `Light` e `Dark` (app `expenses`) | ✅ Aplicada no remoto |
 | `005_theme_brightness.sql` | Coluna `themes.brightness` + default/constraint + `get_user_themes` com `brightness` | ✅ Aplicada no remoto |
+| `006_remove_default_theme.sql` | Desativa o tema `default` (`is_active=false`) — fora do catálogo e da validação de códigos | ✅ Aplicada no remoto |
+| `007_themes_order_free_first.sql` | Renumera `sort_order` dos temas (gratuitos `light`/`default`/`dark` primeiro) + `get_user_themes` com ordenação free-first | ✅ Aplicada no remoto |
 
 ### Edge Functions (5)
 `delete-account`, `report-unsubscribe`, `send-monthly-report` (relatório mensal, usa `report_type`), `send-welcome-email`, `stripe-webhook` (payment link webhook — **não deployado ainda**, usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo).
@@ -126,7 +128,7 @@ Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 - **Novo modelo de planos na app** (PocketExpenses): página de planos (`plans_page.dart`) mostra Premium `€14.99/ano` e Founder **total das 3 apps** — `€37,50` (50% OFF) ou `€75`; `founderCountProvider` (`subscription_provider.dart`) lê a RPC `get_founder_count()` e ativa o desconto enquanto `founder_count < 5`; banner do dashboard `€14.99/ano`; termos atualizados em `about_page.dart`.
 - **Fluxo de planos app → site** (commit `7cb7bd8`): card de topo de Definições (`settings_page.dart`) e `_PlanCard` da Conta (`account_page.dart`) navegam para `/settings/plans`; botão "Comprar no website" em `plans_page.dart` abre `https://pocketapps.pt/pricing.html`. No site, `pricing.html` (repo `pocketapps.github.io`) mostra botões "Comprar" desativados com labels dinâmicos do `config.js` (ex.: "Comprar Premium · €14.99/ano", "Comprar Founder · €37.50").
 - Docs: `003_founder_count.sql` + RPC `get_founder_count` registados em `backend.md`/`project-status.md`; nota da app em `monetizacao-stripe.md`; fluxo app → site e labels do pricing em `site.md`/`monetizacao-stripe.md`.
-- **Brilho por tema (2026-08-09)**: cada tema define a luminosidade da app — coluna `themes.brightness` (`light`/`dark`) na migration `005_theme_brightness.sql` (backfill + default + constraint) e devolvida por `get_user_themes`; `ThemeInfo.brightness` usada em `themes_page.dart`; `theme_provider.setMode()` substitui o toggle manual de dark mode (removido de `preferences_page.dart`); `main.dart` deriva o `themeMode` do tema ativo. Migrations `004_light_dark_themes.sql` (temas Light/Dark gratuitos) e `005` aplicadas no remoto.
+- **Brilho por tema (2026-08-09)**: cada tema define a luminosidade da app — coluna `themes.brightness` (`light`/`dark`) na migration `005_theme_brightness.sql` (backfill + default + constraint) e devolvida por `get_user_themes`; `ThemeInfo.brightness` usada em `themes_page.dart`; `theme_provider.setMode()` substitui o toggle manual de dark mode (removido de `preferences_page.dart`); `main.dart` deriva o `themeMode` do tema ativo (fallback `AppTheme.light`). Migrations `004_light_dark_themes.sql` (temas Light/Dark gratuitos), `005` e `006_remove_default_theme.sql` (desativação do tema `default`, fora do catálogo e da validação de códigos) aplicadas no remoto.
 - `flutter analyze`: ✅ sem issues.
 
 ### Fixes app → site (este commit)

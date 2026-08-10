@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'theme.dart';
+
 const darkModePrefKey = 'dark_mode';
 const themeNamePrefKey = 'theme_name';
 
@@ -30,12 +32,12 @@ final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
 );
 
 class ThemeNameNotifier extends Notifier<String> {
-  ThemeNameNotifier({this.initial = 'Default'});
+  ThemeNameNotifier({this.initial = 'Light'});
 
   final String initial;
 
   @override
-  String build() => initial;
+  String build() => AppTheme.normalizeThemeName(initial);
 
   Future<void> setTheme(String themeName) async {
     state = themeName;

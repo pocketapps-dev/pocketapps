@@ -19,7 +19,8 @@ void main() async {
 
   final prefs = await SharedPreferences.getInstance();
   final currency = prefs.getString(currencyPrefKey) ?? 'EUR';
-  final themeName = prefs.getString(themeNamePrefKey) ?? 'Default';
+  final themeName =
+      AppTheme.normalizeThemeName(prefs.getString(themeNamePrefKey) ?? 'Light');
   final themeMode = AppTheme.getBrightness(themeName) == Brightness.dark
       ? ThemeMode.dark
       : ThemeMode.light;
