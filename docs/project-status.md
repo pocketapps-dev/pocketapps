@@ -91,6 +91,7 @@ TODO.md                   → Tarefas A/B/C concluídas
 - Relay SMTP: **`smtp-relay.brevo.com`** (Brevo), from padrão `no-reply@pocketapps.pt`.
 - Documentado em [`docs/backend.md`](backend.md) (secção "Email transacional").
 - **Supabase Auth custom SMTP** ✅ configurado e **verificado com envio real** (2026-08-03): magic link/OTP do site chega à inbox. Causa do problema anterior: `smtp_user` errado (email da conta em vez do login SMTP do Brevo).
+- **Relatório mensal** ✅ (2026-08-10): fix do cron — o `send-monthly-report` tratava a `service_role` do cron como JWT de utilizador (`getUser()` → 403 → 401, nada enviava); agora o batch só entra com service role e o modo utilizador só com JWT validado (deploy v16). Diagnóstico de entrega: SPF/DKIM/DMARC/MX/verificação Brevo todos corretos; o *silent drop* temporário do Gmail (rajada de envios de teste) resolveu-se sozinho — ver [`backend.md`](backend.md#agendamento-do-relatrio-pgcron).
 
 ## 5. Site (`pocketapps.github.io` — repo separado)
 

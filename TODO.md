@@ -38,6 +38,7 @@
 - [x] Secrets das edge functions ✅ (2026-08-03, via Management API): `SMTP_USER=b3d20e001@smtp-brevo.com` (login SMTP, não email da conta) + `SMTP_PASS=<xsmtpsib>` confirmados por hash; adicionado `SMTP_REPLY_TO=suporte@pocketapps.pt`
 - [x] **Supabase Auth custom SMTP** ✅ (2026-08-03, via Management API): login `b3d20e001@smtp-brevo.com` + SMTP key, sender `PocketApps <no-reply@pocketapps.pt>` — magic link/OTP do site verificado com envio real (antes: `smtp_user` errado → `535`, nada chegava)
 - [x] Script `scripts/cloudflare-email-routing.ps1` criado (API REST Cloudflare: ativar routing, criar 4 destinos Gmail + rotas, validação final)
+- [x] **Relatório mensal fix** (2026-08-10): cron enviava `service_role` no `Authorization` → `getUser()` 403 → 401 (nada enviava). `send-monthly-report` v16: batch só com service role; modo utilizador só com JWT validado. Incidente de entrega Gmail (silent drop temporário após rajada de testes) resolveu-se sozinho — ver `docs/backend.md`
 - [ ] (utilizador) Configurar Cloudflare Email Routing: preencher token/IDs no script e executá-lo (4 destinos Gmail + rotas `geral@`, `suporte@`, `billing@`, `marketing@`) + confirmar os emails de verificação dos destinos
 
 ## Tarefa E — Auth no site ✅ COMPLETA (2026-08-03)

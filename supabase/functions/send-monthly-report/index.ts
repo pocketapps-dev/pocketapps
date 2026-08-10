@@ -80,12 +80,15 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
   if (catIds.length > 0) {
     const { data } = await supabase
       .from("expenses")
-      .select("id, name, amount, type, category_id, start_date, end_date, installments, frequency, is_active")
+      .select("id, name, amount, type, category_id, start_date, end_date, due_day, installments, frequency, is_active")
       .eq("user_id", userId)
       .in("category_id", catIds)
       .eq("is_active", true);
     expenses = data || [];
   }
+
+  console.log(`[REPORT] userId=${userId} app=${appName} period=${monthStart}->${monthEnd}`);
+  console.log(`[REPORT] categories=${(categories || []).length} catIds=[${catIds.join(",")}] expensesFetched=${expenses.length}`);
 
   let total = 0;
   let recurring = 0;
@@ -121,7 +124,11 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
   };
 
   for (const e of expenses || []) {
-    if (!occursInMonth(e)) continue;
+    const inMonth = occursInMonth(e);
+    console.log(
+      `[REPORT] expense id=${e.id} name="${e.name}" type=${e.type} amount=${e.amount} start=${e.start_date} end=${e.end_date} due=${e.due_day} freq=${e.frequency} inst=${e.installments} inMonth=${inMonth}`,
+    );
+    if (!inMonth) continue;
     const amt = Number(e.amount) || 0;
     total += amt;
     count++;
@@ -143,6 +150,7 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
 
   const sortedCat = [...byCategory.entries()].sort((a, b) => b[1] - a[1]);
   const sortedItems = items.sort((a, b) => b.amount - a.amount);
+  console.log(`[REPORT] RESULT total=${total} recurring=${recurring} unique=${unique} count=${count} items=${items.length}`);
   return { total, recurring, unique, count, byCategory: sortedCat, items: sortedItems };
 }
 
@@ -277,25 +285,40 @@ serve(async (req: Request) => {
   try {
     const body = await req.json().catch(() => ({}));
     const authHeader = req.headers.get("Authorization");
+    const jwt = authHeader ? authHeader.replace(/^Bearer\s+/i, "").trim() : "";
+    const apikey = req.headers.get("apikey") || "";
+    const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const isServiceRole = (jwt && jwt === serviceRole) || (!jwt && apikey === serviceRole);
 
-    const supabase = createClient(
+    let supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      authHeader ? Deno.env.get("SUPABASE_ANON_KEY") ?? "" : Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      authHeader ? { global: { headers: { Authorization: authHeader } } } : {},
+      serviceRole,
+      { auth: { autoRefreshToken: false, persistSession: false } },
     );
+
+    let user: { id: string; email?: string | undefined } | null = null;
+
+    if (jwt) {
+      const client = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+        {
+          global: { headers: { Authorization: `Bearer ${jwt}` } },
+          auth: { autoRefreshToken: false, persistSession: false },
+        },
+      );
+      const { data, error } = await client.auth.getUser(jwt);
+      if (!error && data?.user) {
+        user = data.user;
+        supabase = client;
+      }
+    }
 
     let targets: { user_id: string; email: string }[] = [];
 
-    if (authHeader) {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-      if (!user.email) {
-        return new Response(JSON.stringify({ error: "User has no email" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
+    if (user && user.email) {
       targets = [{ user_id: user.id, email: user.email }];
-    } else {
+    } else if (isServiceRole) {
       const now = new Date();
       const day = now.getDate();
       const hour = now.getHours();
@@ -313,12 +336,15 @@ serve(async (req: Request) => {
         if (!emailById.get(p.user_id)) continue;
         targets.push({ user_id: p.user_id, email: emailById.get(p.user_id) });
       }
+    } else {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const results: string[] = [];
+    const testData: any[] = [];
 
     for (const t of targets) {
-      const isTest = !!authHeader;
+      const isTest = !!user;
       const now = new Date();
       const testMonth = isTest && body.month ? parseMonthParam(body.month) : null;
       const monthStart = isTest
@@ -353,9 +379,21 @@ serve(async (req: Request) => {
         : buildDetailedReportHtml(userName, data, monthStart, includeCategories, includeCharts, unsubscribeUrl);
       const ok = await sendSmtpEmail(t.email, subject, html);
       results.push(`${t.user_id}:${reportType}:${ok ? "sent" : "failed"}`);
+      if (isTest) {
+        testData.push({
+          month: `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`,
+          monthStart: monthStart.toISOString(),
+          monthEnd: monthEnd.toISOString(),
+          total: data.total,
+          recurring: data.recurring,
+          unique: data.unique,
+          count: data.count,
+          items: data.items,
+        });
+      }
     }
 
-    return new Response(JSON.stringify({ success: true, results }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ success: true, results, testData }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("send-monthly-report error:", err);
     return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });

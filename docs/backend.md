@@ -136,9 +136,11 @@ Desde 2026-08-04 a app consome `get_user_themes` (`p_app_name='expenses'`) para 
 
 ## Agendamento do relatório (pg_cron)
 
-Modo **batch** (sem `Authorization`): lê `report_preferences` e envia a todos com `email_reports_enabled=true` cujo `report_day`/`report_hour` correspondam à invocação. Basta correr de hora em hora.
+Modo **batch**: lê `report_preferences` e envia a todos com `email_reports_enabled=true` cujo `report_day`/`report_hour` correspondam à invocação. Basta correr de hora em hora. O batch é ativado quando **não há `Authorization`** ou quando o header é a **`service_role`** (é o caso do cron); se houver um JWT de utilizador válido, envia só para esse utilizador (modo teste da app). Corrigido em 2026-08-10: antes, o cron (que envia `Authorization: Bearer <service_role>`) fazia `getUser()` devolver 403 → a função respondia 401 e **não enviava**; agora o JWT só é tratado como utilizador se `getUser()` validar, senão cai no batch (só se for service role).
 
 **Aplicado** (2026-08-03): job `monthly-report-hourly` (jobid 2, schedule `0 * * * *`, active), com a `service_role` no Vault (`service_role_key`). Requisitos: extensões `pg_net` e `pg_cron` ativas.
+
+> **Incidente 2026-08-10 (resolvido):** após uma rajada de envios de teste (~6 em 10 min) o Gmail começou a **descartar em silêncio** os emails (aceitava na fila, sem entrega nem bounce — até um endereço Gmail inexistente não devolvia `550`), coincidindo com o deploy do fix `due_day`. SPF/DKIM/DMARC/MX estavam todos corretos e o IP do Brevo não estava em blocklists. O *silent drop* foi **temporário** e passou sozinho em ~1-2h (os emails acumulados foram todos entregues). Lição: não fazer muitos envios de teste seguidos; para diagnosticar entrega usar um único envio por vez e esperar.
 
 ## Cloudflare Email Routing
 
