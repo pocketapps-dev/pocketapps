@@ -43,7 +43,7 @@ RLS ativado nas tabelas principais. Índices optimizados por `user_id`/`app_name
 | Função | Versão deployed | verify_jwt | Import map | Uso |
 |---|---|---|---|---|
 | `send-welcome-email` | 46 | true | `deno.json` | Boas-vindas por app (`expenses`/`fuel`/`shopping` via `APP_CONFIG`) |
-| `send-monthly-report` | 9 | true | `deno.json` | Relatório mensal (simple/detailed) |
+| `send-monthly-report` | 10 | true | `deno.json` | Relatório mensal (simple/detailed) |
 | `delete-account` | 46 | true | `deno.json` | Confirmação de eliminação de conta |
 | `report-unsubscribe` | 4 | false | — | Unsubscribe do relatório (não envia email) |
 | `stripe-webhook` | — | — | — | Webhook `checkout.session.completed` — 🔴 não deployado (bloqueado pela Stripe) |
@@ -112,9 +112,16 @@ O **Supabase Auth** (email de confirmação, magic link/OTP do site, reset de pa
 Controlado por `report_preferences.report_type`:
 
 - `simple` — cabeçalho + linha de estatísticas (Total/Recorrentes/Únicas/Despesas) + CTA; sem categorias nem gráficos.
-- `detailed` (padrão) — além das estatísticas, quebra por categoria (barras HTML) e, se `include_charts`, indicadores do mês.
+- `detailed` (padrão) — além das estatísticas, quebra por categoria (barras HTML), se `include_charts` os indicadores do mês, e desde 2026-08-10 a **lista "Despesas do mês"** (cada despesa do mês: nome, categoria, tipo + quando, valor — ordenada por valor decrescente, com nomes/categorias escapados).
 
 Precedência na função: `body.report_type` → `report_preferences.report_type` → `'detailed'`. A app grava com `report_type` no upsert de `report_preferences` (`report_provider.dart` usa `'detailed'` como fallback). Migration `002_report_type.sql` adiciona a coluna com `add column if not exists`, mantendo `detailed` para preferências existentes.
+
+### Relatório de teste — escolha do mês (2026-08-10)
+
+- A app (`report_settings_page.dart`) pergunta o **mês** antes de enviar o teste ("Enviar relatório de teste" → diálogo com grelha de meses e navegação de ano).
+- A app envia `body.month` (`"YYYY-MM"`) na invocação da função; em modo teste (com `Authorization`) a função usa esse mês como período do relatório (`parseMonthParam`; default = mês atual).
+- **Fix de valores vazios**: removido `if (s > now) return false` em `occursInMonth` — excluía despesas recorrentes com `start_date` posterior à data de execução (ex.: recorrente que começa a 15/ago ficava fora do relatório de agosto enviado a 10/ago). A iteração mensal é a única fonte de verdade do mês.
+- Modo batch (cron) inalterado: ignora `body.month` e continua a reportar o mês anterior.
 
 ## Loja de temas (app PocketExpenses)
 

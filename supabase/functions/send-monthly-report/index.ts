@@ -44,8 +44,26 @@ function money(v: number): string {
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(v || 0);
 }
 
+function escapeHtml(v: unknown): string {
+  return String(v ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function monthLabel(d: Date): string {
   return new Intl.DateTimeFormat("pt-PT", { month: "long", year: "numeric" }).format(d);
+}
+
+function parseMonthParam(value: string): Date | null {
+  const m = /^(\d{4})-(\d{1,2})$/.exec(String(value));
+  if (!m) return null;
+  const year = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  if (month < 1 || month > 12) return null;
+  return new Date(year, month - 1, 1);
 }
 
 async function fetchReportData(supabase: any, userId: string, appName: string, monthStart: string, monthEnd: string) {
@@ -74,10 +92,10 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
   let unique = 0;
   let count = 0;
   const byCategory = new Map<string, number>();
+  const items: { name: string; amount: number; type: string; category: string; when: string }[] = [];
 
   const start = new Date(monthStart);
   const end = new Date(monthEnd);
-  const now = new Date();
 
   const occursInMonth = (e: any): boolean => {
     if (e.type === "unique") {
@@ -86,7 +104,6 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
     }
     if (!e.start_date) return false;
     const s = new Date(e.start_date + "T00:00:00");
-    if (s > now) return false;
     const endD = e.end_date ? new Date(e.end_date + "T00:00:00") : null;
     if (endD && endD < start) return false;
     if (e.installments && e.installments > 0) {
@@ -113,10 +130,20 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
     const cat = catById.get(e.category_id);
     const catName = cat?.name || "Sem Categoria";
     byCategory.set(catName, (byCategory.get(catName) || 0) + amt);
+    items.push({
+      name: e.name,
+      amount: amt,
+      type: e.type,
+      category: catName,
+      when: e.type === "unique"
+        ? (e.start_date || "")
+        : (e.due_day ? `Dia ${e.due_day}` : e.start_date || ""),
+    });
   }
 
   const sortedCat = [...byCategory.entries()].sort((a, b) => b[1] - a[1]);
-  return { total, recurring, unique, count, byCategory: sortedCat };
+  const sortedItems = items.sort((a, b) => b.amount - a.amount);
+  return { total, recurring, unique, count, byCategory: sortedCat, items: sortedItems };
 }
 
 function statsRowsHtml(data: any): string {
@@ -140,6 +167,19 @@ function statsRowsHtml(data: any): string {
       </td>
     </tr>
   </table>`;
+}
+
+function buildExpensesTableHtml(items: any[]): string {
+  if (!items || items.length === 0) return "";
+  const rows = items
+    .map((it: any) => `<tr>
+      <td style="padding:8px 0; color:#111827; font-size:14px; font-weight:600; width:38%;">${escapeHtml(it.name)}</td>
+      <td style="padding:8px 0; color:#6b7280; font-size:13px; width:22%;">${escapeHtml(it.category)}</td>
+      <td style="padding:8px 0; color:#6b7280; font-size:12px; width:20%;">${it.type === "recurring" ? "Recorrente" : "Única"}${it.when ? " · " + escapeHtml(it.when) : ""}</td>
+      <td style="padding:8px 0; text-align:right; color:#111827; font-size:14px; font-weight:600; width:20%;">${money(it.amount)}</td>
+    </tr>`)
+    .join("");
+  return `<table width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 0 0;">${rows}</table>`;
 }
 
 function buildShellHtml(title: string, subtitle: string, bodyHtml: string, unsubscribeUrl: string): string {
@@ -222,7 +262,7 @@ function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, 
       </table>`
     : "";
 
-  const bodyHtml = `${chartsHtml}${statsRowsHtml(data)}<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Por categoria</h3>${categoriesHtml}`;
+  const bodyHtml = `${chartsHtml}${statsRowsHtml(data)}<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Por categoria</h3>${categoriesHtml}<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Despesas do mês</h3>${buildExpensesTableHtml(data.items)}`;
   return buildShellHtml(
     `Relatório de ${label}`,
     `Olá ${userName}, aqui está o resumo das tuas despesas.`,
@@ -280,11 +320,13 @@ serve(async (req: Request) => {
     for (const t of targets) {
       const isTest = !!authHeader;
       const now = new Date();
+      const testMonth = isTest && body.month ? parseMonthParam(body.month) : null;
       const monthStart = isTest
-        ? new Date(now.getFullYear(), now.getMonth(), 1)
+        ? (testMonth ?? new Date(now.getFullYear(), now.getMonth(), 1))
         : new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
-
+      const monthEnd = testMonth
+        ? new Date(testMonth.getFullYear(), testMonth.getMonth() + 1, 1)
+        : new Date(now.getFullYear(), now.getMonth(), 1);
       let prefsRow: any = {};
       const { data: prefsData } = await supabase
         .from("report_preferences")

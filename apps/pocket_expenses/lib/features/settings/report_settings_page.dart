@@ -11,6 +11,12 @@ class ReportSettingsPage extends ConsumerStatefulWidget {
 }
 
 class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
+  static const _monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril',
+    'Maio', 'Junho', 'Julho', 'Agosto',
+    'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  ];
+
   bool _enabled = false;
   int _day = 1;
   int _hour = 9;
@@ -63,14 +69,20 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
   }
 
   Future<void> _sendTest() async {
+    final month = await _pickTestMonth();
+    if (month == null || !mounted) return;
+
     setState(() => _isSendingTest = true);
-    final ok = await ref.read(reportActionsProvider).sendTest(reportType: _reportType);
+    final ok = await ref.read(reportActionsProvider).sendTest(
+          reportType: _reportType,
+          month: '${month.year}-${month.month.toString().padLeft(2, '0')}',
+        );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             ok
-                ? 'Relatório de teste enviado para o teu email'
+                ? 'Relatório de teste de ${_monthNames[month.month - 1]} ${month.year} enviado para o teu email'
                 : 'Erro ao enviar o relatório de teste',
           ),
           backgroundColor: ok ? Colors.green : Colors.red,
@@ -187,6 +199,65 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
         ],
       ),
     );
+  }
+
+  Future<DateTime?> _pickTestMonth() async {
+    var year = DateTime.now().year;
+    DateTime? result;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Mês do relatório de teste'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left),
+                    onPressed: () => setDialogState(() => year--),
+                  ),
+                  Text(
+                    '$year',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: () => setDialogState(() => year++),
+                  ),
+                ],
+              ),
+              const Divider(height: 1),
+              GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 2.4,
+                children: [
+                  for (var m = 1; m <= 12; m++)
+                    OutlinedButton(
+                      onPressed: () {
+                        result = DateTime(year, m);
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        _monthNames[m - 1],
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return result;
   }
 
   Future<int?> _pickDay() async {

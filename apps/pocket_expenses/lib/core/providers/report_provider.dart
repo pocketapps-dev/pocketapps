@@ -51,6 +51,6 @@ class ReportActions {
     _ref.invalidate(reportPreferencesProvider);
   }
 
-  Future<bool> sendTest({String? reportType}) =>
-      _service.sendTestReport(reportType: reportType);
+  Future<bool> sendTest({String? reportType, String? month}) =>
+      _service.sendTestReport(reportType: reportType, month: month);
 }

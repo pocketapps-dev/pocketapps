@@ -57,3 +57,13 @@
 - [x] 7. `flutter analyze` limpo (0 issues)
 - [x] 8. Commit + push (este commit)
 
+## Tarefa G — Relatório mensal: mês no teste + lista de despesas ✅ COMPLETA (2026-08-10)
+- [x] 1. App `report_settings_page.dart`: "Enviar relatório de teste" abre diálogo de escolha de mês (grelha 12 meses + navegação de ano); SnackBar confirma o mês enviado
+- [x] 2. App `report_provider.dart`/`report_service.dart`: `sendTest`/`sendTestReport` aceitam `month` (`"YYYY-MM"`) e enviam no body da edge function
+- [x] 3. Edge function `send-monthly-report`: novo `parseMonthParam` + `body.month` no modo teste (default = mês atual); batch inalterado
+- [x] 4. Edge function: fix de valores vazios — removido `if (s > now) return false` em `occursInMonth` (excluía recorrentes com `start_date` futuro dentro do mês)
+- [x] 5. Edge function: `fetchReportData` devolve `items` (despesas do mês) e o relatório `detailed` ganha a secção "Despesas do mês" (nome, categoria, tipo + quando, valor; ordenada por valor; `escapeHtml`)
+- [x] 6. `flutter analyze` limpo (0 issues)
+- [x] 7. Docs atualizados (`backend.md`, `project-status.md`) + commit/push
+- [ ] (pendente) Deploy da edge function `send-monthly-report` (v9 → v10) no Supabase para ativar o `body.month`/lista de despesas/fix em produção
+

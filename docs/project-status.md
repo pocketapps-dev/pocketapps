@@ -53,7 +53,7 @@ TODO.md                   → Tarefas A/B/C concluídas
 - Auth Supabase (email/password + Google) com fluxo completo (callback, reset password, mudar email/password, apagar conta).
 - Gestão de despesas recorrentes/únicas, categorias, resumo mensal, calendário, temas.
 - **Loja de temas (2026-08-04)**: página `/settings/themes` alimentada pelo RPC `get_user_themes` — secções Grátis (Light, Dark) / **TEMAS PAGOS** (todos os não-gratuitos: Premium Midnight, Forest, Sunset + Ocean, Autumn, Galaxy 0,99€, compra no site `themes.html`) + ativação de código de tema. Desde 2026-08-10 tocar num tema premium abre um diálogo ("Ver planos" → `/settings/plans` ou "Obter no site" → `themes.html`); temas pagos abrem a loja diretamente. Desde 2026-08-09 cada tema define a luminosidade da app (light/dark) e o tema `default` foi removido (migration `006_remove_default_theme.sql`).
-- Relatórios mensais por email (`report_settings_page` + `report_provider`/`report_service`).
+- Relatórios mensais por email (`report_settings_page` + `report_provider`/`report_service`). Desde 2026-08-10 o **relatório de teste escolhe o mês** (diálogo com grelha de meses + ano) e o relatório `detailed` inclui a **lista completa "Despesas do mês"** (nome, categoria, tipo, valor).
 - Plataformas de destino: Android (APK gerado em CI). `version: 1.0.0+1`.
 
 ## 4. Backend Supabase
@@ -158,6 +158,7 @@ Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 | 17 | App: botão "Comprar no website" não reencaminhava (`canLaunchUrl` falhava silenciosamente) | ✅ corrigido (este commit — `launchUrl` direto + SnackBar) |
 | 18 | Site: `pricing.html` sem botões "Comprar" (`config.js` carregado com `defer`, script corria antes) | ✅ corrigido (este commit — `defer` removido) |
 | 19 | App: brilho por tema (light/dark) — tema ativo controla o `themeMode` | ✅ feito (2026-08-09) |
+| 20 | App: relatório de teste com escolha de mês + lista "Despesas do mês" no `detailed` + fix valores vazios (`s > now`) | ✅ feito (2026-08-10) |
 
 ## 10. Notas de manutenção
 

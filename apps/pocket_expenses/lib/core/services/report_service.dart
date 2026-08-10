@@ -40,11 +40,15 @@ class ReportService {
     );
   }
 
-  Future<bool> sendTestReport({String? reportType}) async {
+  Future<bool> sendTestReport({String? reportType, String? month}) async {
     try {
       await _client.functions.invoke(
         'send-monthly-report',
-        body: {'test': true, 'report_type': ?reportType},
+        body: {
+          'test': true,
+          'report_type': ?reportType,
+          'month': ?month,
+        },
       );
       return true;
     } catch (_) {
