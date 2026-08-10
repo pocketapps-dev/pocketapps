@@ -52,7 +52,7 @@ TODO.md                   → Tarefas A/B/C concluídas
 **pocket_expenses** (app principal):
 - Auth Supabase (email/password + Google) com fluxo completo (callback, reset password, mudar email/password, apagar conta).
 - Gestão de despesas recorrentes/únicas, categorias, resumo mensal, calendário, temas.
-- **Loja de temas (2026-08-04)**: página `/settings/themes` alimentada pelo RPC `get_user_themes` — secções Grátis (Light, Dark) / Premium (Midnight, Forest, Sunset) / Pagos (Ocean, Autumn, Galaxy 0,99€, compra no site `themes.html`) + ativação de código de tema. Desde 2026-08-09 cada tema define a luminosidade da app (light/dark) e o tema `default` foi removido (migration `006_remove_default_theme.sql`).
+- **Loja de temas (2026-08-04)**: página `/settings/themes` alimentada pelo RPC `get_user_themes` — secções Grátis (Light, Dark) / **TEMAS PAGOS** (todos os não-gratuitos: Premium Midnight, Forest, Sunset + Ocean, Autumn, Galaxy 0,99€, compra no site `themes.html`) + ativação de código de tema. Desde 2026-08-10 tocar num tema premium abre um diálogo ("Ver planos" → `/settings/plans` ou "Obter no site" → `themes.html`); temas pagos abrem a loja diretamente. Desde 2026-08-09 cada tema define a luminosidade da app (light/dark) e o tema `default` foi removido (migration `006_remove_default_theme.sql`).
 - Relatórios mensais por email (`report_settings_page` + `report_provider`/`report_service`).
 - Plataformas de destino: Android (APK gerado em CI). `version: 1.0.0+1`.
 

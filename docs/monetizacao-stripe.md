@@ -36,7 +36,7 @@ Decisões de 2026-08-08:
 |---|---|---|
 | **1 — Anúncios (Free)** | Native no dashboard, Banner no rodapé, Interstitial máx. 1x/dia após criar despesa, Rewarded opcional no paywall | `google_mobile_ads` (AdMob) + Google UMP (RGPD); ~0,63€/user/mês |
 | **2 — Gates de limite** | Despesas ativas 10 (Free) / ilimitado; Categorias 10 / ilimitadas; editar categorias = Premium | `ExpenseActions.create()`, `CategoryActions.create()`, `CategoryActions.update()`, `CategoriesPage`; paywall `premium_gate_dialog.dart` |
-| **3 — Temas Premium** | Free = light+dark; Premium = +3 temas | `theme_models.dart`, `AppTheme` seedColor dinâmico, gate no `PreferencesPage` |
+| **3 — Temas Premium** | Free = light+dark; Premium = +3 temas | `theme_info.dart`, `AppTheme` seedColor dinâmico, gate na `themes_page.dart` (diálogo "Ver planos" / "Obter no site") |
 | **4 — Código Founder** | Bundle **todas as apps** a 25€/app (50% no total só p/ 1ºs 5; máx. 25 pessoas) | Migration SQL (check aceita `'all'`); RPC `validate_activation_code` ativa todas as apps; dialog aceita códigos `all` |
 | **5 — Relatórios elaborados** | Free = básico; Premium = Δ% vs mês anterior, top 3, recorrentes vs únicas, dica | `send-monthly-report` verifica subscrição |
 | **6 — Widgets Home Screen** | Free = normal; Premium = widgets (próximas despesas, total do mês) | `home_widget` + configuração nativa (AndroidManifest/Info.plist) + cache local |

@@ -5,7 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/theme_provider.dart';
 import '../../core/models/theme_info.dart';
-import '../../core/providers/subscription_provider.dart';
 import '../../core/providers/theme_store_provider.dart';
 
 class ThemesPage extends ConsumerWidget {
@@ -17,8 +16,6 @@ class ThemesPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themesAsync = ref.watch(themeStoreProvider);
     final currentTheme = ref.watch(themeNameProvider);
-    final subscription = ref.watch(subscriptionProvider).value;
-    final isPremium = subscription?.isActive == true;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Temas')),
@@ -33,16 +30,11 @@ class ThemesPage extends ConsumerWidget {
           }
 
           final free = themes.where((t) => t.isFree).toList();
-          final premium = themes.where((t) => t.isPremium).toList();
-          final paid = themes.where((t) => t.isPaid).toList();
+          final locked = themes.where((t) => !t.isFree).toList();
 
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              if (!isPremium) ...[
-                _PremiumBanner(onTap: () => context.push('/settings/plans')),
-                const SizedBox(height: 16),
-              ],
               if (free.isNotEmpty) ...[
                 const _SectionLabel('GRÁTIS'),
                 const SizedBox(height: 8),
@@ -54,25 +46,16 @@ class ThemesPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
               ],
-              if (premium.isNotEmpty) ...[
-                const _SectionLabel('PREMIUM'),
-                const SizedBox(height: 8),
-                _ThemeCard(
-                  themes: premium,
-                  currentTheme: currentTheme,
-                  onApply: (t) => _apply(ref, t),
-                  onLocked: (t) => context.push('/settings/plans'),
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (paid.isNotEmpty) ...[
+              if (locked.isNotEmpty) ...[
                 const _SectionLabel('TEMAS PAGOS'),
                 const SizedBox(height: 8),
                 _ThemeCard(
-                  themes: paid,
+                  themes: locked,
                   currentTheme: currentTheme,
                   onApply: (t) => _apply(ref, t),
-                  onLocked: (t) => _openStore(context),
+                  onLocked: (t) => t.isPremium
+                      ? _showPremiumDialog(context, t)
+                      : _openStore(context),
                 ),
                 const SizedBox(height: 8),
                 TextButton.icon(
@@ -117,6 +100,39 @@ class ThemesPage extends ConsumerWidget {
         ),
       );
     }
+  }
+
+  void _showPremiumDialog(BuildContext context, ThemeInfo theme) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Tema Premium'),
+        content: Text(
+          '${theme.name} está incluído no plano Premium.\n'
+          'Subscreve o plano ou obtém o tema individualmente no site.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Fechar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _openStore(context);
+            },
+            child: const Text('Obter no site'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.push('/settings/plans');
+            },
+            child: const Text('Ver planos'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showThemeCodeDialog(BuildContext context, WidgetRef ref) {
@@ -195,51 +211,6 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _PremiumBanner extends StatelessWidget {
-  const _PremiumBanner({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const Icon(Icons.workspace_premium_outlined, size: 32),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Desbloqueia os temas Premium',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Midnight, Forest e Sunset incluídos no plano Premium.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              onPressed: onTap,
-              child: const Text('Ver planos'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _ThemeCard extends StatelessWidget {
   const _ThemeCard({
     required this.themes,
@@ -298,7 +269,7 @@ class _ThemeTile extends StatelessWidget {
           Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 4),
           Text(
-            'Ativo',
+            'Aplicado',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -310,7 +281,7 @@ class _ThemeTile extends StatelessWidget {
     } else if (locked) {
       trailing = TextButton(
         onPressed: onLocked,
-        child: Text(theme.isPremium ? 'Premium' : theme.priceLabel),
+        child: const Text('Obter'),
       );
     } else {
       trailing = TextButton(onPressed: onApply, child: const Text('Aplicar'));
