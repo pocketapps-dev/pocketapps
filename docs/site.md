@@ -24,6 +24,7 @@
   - `apps.html`, `features.html`, `pricing.html`, `themes.html`
 - **Páginas públicas**: `index.html` (homepage), `conta.html`, `contact.html`, `ativar.html`, `terms.html`, `privacy.html`.
 - **Popup de cookies** (RGPD): aparece na primeira visita, com "Aceitar"/"Recusar", escolha guardada em `localStorage`.
+- **Hamburger único (2026-08-10)**: o commit `b9947f3` adicionou um 2º botão hamburger (`navMenuBtn` + `_hamburger.css`) para o menu de utilizador sem remover o original (`navMenuToggle`, menu móvel) — em mobile ≤640px apareciam **dois** hamburgers lado a lado. Corrigido revertendo `b9947f3` (`6d186f6`): fica só o hamburger do menu móvel (que já inclui Entrar/email/Sair).
 
 ## Configuração central de preços/promoções
 
