@@ -112,13 +112,13 @@ O **Supabase Auth** (email de confirmação, magic link/OTP do site, reset de pa
 Controlado por `report_preferences.report_type`:
 
 - `simple` — cabeçalho + linha de estatísticas (Total/Recorrentes/Únicas/Despesas) + CTA; sem categorias nem gráficos.
-- `detailed` (padrão) — além das estatísticas, quebra por categoria, e desde 2026-08-10 a **lista "Despesas do mês"** (cada despesa do mês: nome, categoria, tipo + quando, valor — ordenada por valor decrescente, com nomes/categorias escapados). Os **gráficos** aparecem no **fim do email**: donut de distribuição por categoria (`conic-gradient` com cor de cada categoria + centro branco com o total; em clientes sem suporte a `conic-gradient` — Gmail/Outlook Windows — degrada para anel cinzento com a legenda a manter os valores) + legenda (cor, categoria, valor, %) + barra "Recorrentes vs únicas".
+- `detailed` (padrão) — além das estatísticas, quebra por categoria, e desde 2026-08-10 a **lista "Despesas do mês"** (cada despesa do mês: nome, categoria, tipo + quando, valor — ordenada por valor decrescente, com nomes/categorias escapados). Os **gráficos** aparecem no **fim do email**: donut de distribuição por categoria (`conic-gradient` com cor de cada categoria + centro branco com o total; em clientes sem suporte a `conic-gradient` — Gmail/Outlook Windows — degrada para anel cinzento com a legenda a manter os valores) + legenda (cor, categoria, valor, %) + barras horizontais "Despesas por categoria" + barra "Recorrentes vs únicas".
 
 Precedência na função: `body.report_type` → `report_preferences.report_type` → `'detailed'`. A app grava com `report_type` no upsert de `report_preferences` (`report_provider.dart` usa `'detailed'` como fallback). Migration `002_report_type.sql` adiciona a coluna com `add column if not exists`, mantendo `detailed` para preferências existentes.
 
 ### PDF em anexo (2026-08-10)
 
-- O email passa a incluir um **PDF em anexo** (`relatorio-AAAA-MM.pdf`), gerado com `pdf-lib` (via `esm.sh`, corre nativamente em Deno) — contém cabeçalho, estatísticas, categorias, despesas do mês e, no fim, os gráficos (donut vetorial desenhado com `drawSvgPath` + barra "Recorrentes vs únicas").
+- O email passa a incluir um **PDF em anexo** (`relatorio-AAAA-MM.pdf`), gerado com `pdf-lib` (via `esm.sh`, corre nativamente em Deno) — contém cabeçalho, estatísticas, categorias (com quadrado de cor), despesas do mês e, no fim, os gráficos (donut vetorial desenhado com `drawSvgPath` + legenda, barras por categoria e barra "Recorrentes vs únicas").
 - O PDF só usa fontes standard (Helvetica) e caracteres Latin-1 (função `pdfSafe`) — **fix 2026-08-10:** o carácter `■` (U+25A0) na legenda fazia `pdf-lib` lançar `WinAnsi cannot encode` e o anexo falhava silenciosamente (email seguia sem PDF); substituído por quadrados de legenda desenhados (retângulos) e texto sem `■`.
 - A geração falha graciosamente: se o PDF der erro, o email segue sem anexo (log `[PDF] ...`).
 - **Persistência dos toggles na app (2026-08-10):** `report_settings_page.dart` agora lê o valor em cache no `initState` (`ref.read(...).value`) antes de registar o `ref.listen` — antes, ao reabrir a página, o listener não disparava com o valor já em cache e os toggles voltavam aos defaults em vez da escolha guardada. Nota: o Riverpod 3.3.2 não tem `fireImmediately` no `ref.listen` (só `onError`/`weak`), daí a leitura explícita no `initState`.
@@ -129,6 +129,13 @@ Precedência na função: `body.report_type` → `report_preferences.report_type
 - A app envia `body.month` (`"YYYY-MM"`) na invocação da função; em modo teste (com `Authorization`) a função usa esse mês como período do relatório (`parseMonthParam`; default = mês atual).
 - **Fix de valores vazios**: removido `if (s > now) return false` em `occursInMonth` — excluía despesas recorrentes com `start_date` posterior à data de execução (ex.: recorrente que começa a 15/ago ficava fora do relatório de agosto enviado a 10/ago). A iteração mensal é a única fonte de verdade do mês.
 - Modo batch (cron) inalterado: ignora `body.month` e continua a reportar o mês anterior.
+
+### Cores por categoria (2026-08-11)
+
+- Cada categoria tem uma **cor estável**, tirada de `CATEGORY_PALETTE` (paleta fixa de 10 cores) e atribuída por ordem decrescente de valor — as categorias com maior despesa ficam com as primeiras cores da paleta.
+- A cor é validada (hex de 6 dígitos, excluída a cor base da app `#6366f1`); cores inválidas caem para `CATEGORY_PALETTE[i % CATEGORY_PALETTE.length]` e, em falta, `#6366F1`.
+- A mesma cor é usada em **todo o relatório** (email e PDF): swatch/quadrado junto a cada categoria, donut (stops do `conic-gradient` no email; segmentos `drawSvgPath` no PDF), legenda, e **barras horizontais "Despesas por categoria"** (largura proporcional ao valor, com %).
+- Barra "Recorrentes vs únicas": recorrentes = cor primária (`#6366f1`/indigo), únicas = verde (`#10B981` no email; `rgb(0.063, 0.725, 0.506)` no PDF).
 
 ## Loja de temas (app PocketExpenses)
 
