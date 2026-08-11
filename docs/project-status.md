@@ -1,7 +1,7 @@
 # PocketApps — Estado Global do Projeto
 
 > Resumo completo do monorepo: o que existe, o que está em progresso e o que falta.
-> Atualizado em 2026-08-10.
+> Atualizado em 2026-08-11.
 
 ## 1. Visão geral
 
@@ -25,7 +25,7 @@ packages/
   pocketapps_auth/        → Auth partilhada (Supabase + Google)
 supabase/
   schema.sql              → Fonte de verdade do schema (todas as apps)
-  migrations/             → 001_themes.sql, 002_report_type.sql, 003_founder_count.sql, 004_light_dark_themes.sql, 005_theme_brightness.sql, 006_remove_default_theme.sql
+  migrations/             → 001_themes.sql, 002_report_type.sql, 003_founder_count.sql, 004_light_dark_themes.sql, 005_theme_brightness.sql, 006_remove_default_theme.sql, 007_themes_order_free_first.sql
   functions/              → 5 Edge Functions (Deno)
 docs/
   auth.md                 → Autenticação (Supabase Auth + Google, setup no dashboard)
@@ -85,7 +85,7 @@ TODO.md                   → Tarefas A/B/C concluídas
 | `007_themes_order_free_first.sql` | Renumera `sort_order` dos temas (gratuitos `light`/`default`/`dark` primeiro) + `get_user_themes` com ordenação free-first | ✅ Aplicada no remoto |
 
 ### Edge Functions (5)
-`delete-account`, `report-unsubscribe`, `send-monthly-report` (relatório mensal, usa `report_type`), `send-welcome-email`, `stripe-webhook` (payment link webhook — **não deployado ainda**, usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo).
+`delete-account`, `report-unsubscribe`, `send-monthly-report` (relatório mensal, usa `report_type`), `send-welcome-email`, `stripe-webhook` (payment link webhook — **deployado (v1, 2026-08-11)**, usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo — **env vars ainda por definir no remoto**).
 
 ### Email transacional
 - Relay SMTP: **`smtp-relay.brevo.com`** (Brevo), from padrão `no-reply@pocketapps.pt`.
@@ -123,7 +123,7 @@ Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 - **Planos (decisão 2026-08-08)**: Free por conta (todas as apps) · Premium 1,49€/mês · 14,99€/ano — **todas as apps** (1 SKU) · Founder 25€/app (3 apps = 75€; 50% no total só p/ 1ºs 5 = 37,50€; máx. 25 pessoas, só em desenvolvimento) · Temas à la carte 0,99€/tema por conta. Preços base **sem IVA** ("+ IVA" no site, aplicado no checkout — OSS por país do cliente). Gateway/faturação ainda em estudo — ver [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 - **Passo 1 (temas/loja)** ✅ feito (migration + webhook) — ver acima.
 - **Passos 2–3** ✅: email provider + confirm email + **custom SMTP corrigido** (OTP chega à inbox); redirects e **Site URL** `https://pocketapps.pt` corrigidos (2026-08-03). Magic link do site a funcionar após fix do `SyntaxError` (rename `supabaseClient`, commit `d6f9839`); homepage com login/signup email/password + Google (commit `8dfb41e`).
-- **Passos 4–8** 🔴 **bloqueados**: dashboard da Stripe em baixo (erro do lado da Stripe) — impede criar 6 Payment Links, deploy do `stripe-webhook`, colocar links reais e substituir botões mock.
+- **Passos 4–8** 🟡 **parciais**: `stripe-webhook` já deployado (v1, 2026-08-11); falta definir env vars, criar 6 Payment Links, registar o webhook na Stripe, colocar links reais e substituir botões mock (dashboard da Stripe em baixo — erro do lado da Stripe).
 - **Botões mock**: `buy.stripe.com/TODO_*` → decisão de 2026-08: botões **"Comprar" desativados** com labels dinâmicos do `config.js` em `pricing.html` (ex.: "Comprar Premium · €14.99/ano"); `themes.html` mantém "Em breve" (`.btn-buy` em `style.css`).
 
 ## 8. WIP neste commit (2026-08-08)
@@ -149,7 +149,7 @@ Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 | 1 | Migration `002_report_type.sql` aplicar no remoto | ✅ feito (verificada) |
 | 2 | Dashboard Supabase: email provider + confirm email + **custom SMTP** | ✅ feito (SMTP corrigido e verificado) |
 | 3 | Dashboard Supabase: redirect URLs + Site URL | ✅ feito — allowlist + Site URL `https://pocketapps.pt` (2026-08-03) |
-| 4–8 | Stripe: Payment Links + deploy webhook + links reais + botões | 🔴 bloqueado (Stripe em baixo) |
+| 4–8 | Stripe: Payment Links + deploy webhook + links reais + botões | 🟡 parcial — webhook deployado (v1, 2026-08-11); falta Payment Links + registo webhook (Stripe em baixo) |
 | 9 | Botões mock → "Em breve" (decisão tomada) | ⏳ falta aplicar no site |
 | 10 | Commit do WIP (relatório tipo + temas no schema + reorg de docs) | ✅ feito (commits `a6c2740`, `9253aba`, este) |
 | 11 | Remover `index.ts` órfão da raiz | ✅ removido localmente (sem commit) |
@@ -166,5 +166,5 @@ Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 ## 10. Notas de manutenção
 
 - As páginas do site **não** são versionadas no repo principal (git-ignored); vivem no repo `pocketapps.github.io`.
-- Migrations versionadas em `supabase/migrations/` (001–005) e aplicadas no remoto. `supabase/functions/stripe-webhook/` permanece untracked — não deployado (bloqueado pela Stripe).
+- Migrations versionadas em `supabase/migrations/` (001–007) e aplicadas no remoto. `supabase/functions/stripe-webhook/` commitado e deployado (v1, 2026-08-11) — falta definir env vars no remoto.
 - Alterações locais: CRLF warnings no git (não bloqueantes, só normalização).

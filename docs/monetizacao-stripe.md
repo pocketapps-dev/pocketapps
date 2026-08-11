@@ -59,8 +59,8 @@ Decisões de 2026-08-08:
 | 2 | Auth no Dashboard Supabase: Email provider + Confirm email (magic link) | ✅ Feito — provider ativo, **custom SMTP corrigido e verificado** (OTP chega à inbox); ver [`docs/auth.md`](auth.md) |
 | 3 | Dashboard Supabase: Redirect URLs + Site URL | ✅ Feito — allowlist + Site URL `https://pocketapps.pt` (2026-08-03); magic link do site completa login |
 | 4 | Stripe Payment Links | 🔴 Bloqueado — dashboard Stripe com erro; botões ficaram como mock |
-| 5 | Deploy Edge Function `stripe-webhook` | 🔴 Bloqueado — precisa de `STRIPE_SECRET_KEY` + `whsec_...` |
-| 6 | Registo do webhook no Stripe (`checkout.session.completed`) | 🔴 Bloqueado |
+| 5 | Deploy Edge Function `stripe-webhook` | ✅ Deployado (v1, 2026-08-11) — falta definir env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` no remoto |
+| 6 | Registo do webhook no Stripe (`checkout.session.completed`) | 🔴 Bloqueado — dashboard da Stripe com erro (impede registo do webhook) |
 | 7 | Inserir links reais nos TODOs das páginas | 🔴 Bloqueado |
 | 8 | Substituir botões mock por "Comprar" ativo | 🔴 Bloqueado |
 

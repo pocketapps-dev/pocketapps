@@ -1,7 +1,7 @@
 # PocketApps — Backend (Supabase)
 
 > Backend partilhado: Postgres (schema + RPCs) + Edge Functions (Deno) + email transacional.
-> Atualizado em 2026-08-10.
+> Atualizado em 2026-08-11.
 
 ## Projeto remoto
 
@@ -42,13 +42,13 @@ RLS ativado nas tabelas principais. Índices optimizados por `user_id`/`app_name
 
 | Função | Versão deployed | verify_jwt | Import map | Uso |
 |---|---|---|---|---|
-| `send-welcome-email` | 46 | true | `deno.json` | Boas-vindas por app (`expenses`/`fuel`/`shopping` via `APP_CONFIG`) |
-| `send-monthly-report` | 10 | true | `deno.json` | Relatório mensal (simple/detailed) |
-| `delete-account` | 46 | true | `deno.json` | Confirmação de eliminação de conta |
-| `report-unsubscribe` | 4 | false | — | Unsubscribe do relatório (não envia email) |
-| `stripe-webhook` | — | — | — | Webhook `checkout.session.completed` — 🔴 não deployado (bloqueado pela Stripe) |
+| `send-welcome-email` | 47 | true | `deno.json` | Boas-vindas por app (`expenses`/`fuel`/`shopping` via `APP_CONFIG`) |
+| `send-monthly-report` | 18 | false | `deno.json` | Relatório mensal (simple/detailed) — cron usa `service_role`, por isso `verify_jwt: false` |
+| `delete-account` | 47 | true | `deno.json` | Confirmação de eliminação de conta |
+| `report-unsubscribe` | 5 | false | — | Unsubscribe do relatório (não envia email) |
+| `stripe-webhook` | 1 | false | `deno.json` | Webhook `checkout.session.completed` — ✅ deployado (v1, 2026-08-11) |
 
-`stripe-webhook` usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo; não fazer deploy com chave vazia (`new Stripe('')` rebenta ao arrancar); SDK Stripe `apiVersion: "2024-12-18.acacia"`.
+`stripe-webhook` (deployado v1, 2026-08-11) usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo — **env vars ainda por definir no remoto**: o `index.ts` faz `new Stripe(STRIPE_SECRET_KEY ?? '')` no topo, pelo que rebenta ao arrancar sem chave; definir os secrets antes do primeiro evento real. SDK Stripe `npm:stripe@17.7.0` (import map `deno.json`), `apiVersion: "2024-12-18.acacia"`.
 
 ## Email transacional
 
@@ -85,6 +85,7 @@ const replyTo = Deno.env.get("SMTP_REPLY_TO") || "suporte@pocketapps.pt";
   `SMTP_HOST=smtp-relay.brevo.com`, `SMTP_PORT=587`, `SMTP_USER=b3d20e001@smtp-brevo.com`, `SMTP_PASS=<xsmtpsib>`, `SMTP_FROM=no-reply@pocketapps.pt`, `SMTP_REPLY_TO=suporte@pocketapps.pt`.
 - `SMTP_USER`/`SMTP_PASS` foram corrigidos/confirmados porque a chave anterior era desconhecida.
 - Alternativa para voltar a definir pela CLI: `supabase secrets set SMTP_HOST=smtp-relay.brevo.com SMTP_PORT=587 SMTP_USER=b3d20e001@smtp-brevo.com SMTP_PASS=<senha_brevo_xsmtpsib> SMTP_FROM=no-reply@pocketapps.pt SMTP_REPLY_TO=suporte@pocketapps.pt`
+- `stripe-webhook` (deployado v1, 2026-08-11): **falta definir** `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET` no remoto (ver secção Edge Functions).
 
 Defaults no código: host `smtp-relay.brevo.com`, porta `587`, `SMTP_FROM=no-reply@pocketapps.pt`, `SMTP_REPLY_TO=suporte@pocketapps.pt`.
 
