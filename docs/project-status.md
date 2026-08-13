@@ -26,7 +26,7 @@ packages/
 supabase/
   schema.sql              → Fonte de verdade do schema (todas as apps)
   migrations/             → 001_themes.sql, 002_report_type.sql, 003_founder_count.sql, 004_light_dark_themes.sql, 005_theme_brightness.sql, 006_remove_default_theme.sql, 007_themes_order_free_first.sql
-  functions/              → 5 Edge Functions (Deno)
+  functions/              → 6 Edge Functions (Deno)
 docs/
   auth.md                 → Autenticação (Supabase Auth + Google, setup no dashboard)
   backend.md              → Backend Supabase: schema, RPCs, edge functions, email transacional
@@ -84,8 +84,8 @@ TODO.md                   → Tarefas A/B/C concluídas
 | `006_remove_default_theme.sql` | Desativa o tema `default` (`is_active=false`) — fora do catálogo e da validação de códigos | ✅ Aplicada no remoto |
 | `007_themes_order_free_first.sql` | Renumera `sort_order` dos temas (gratuitos `light`/`default`/`dark` primeiro) + `get_user_themes` com ordenação free-first | ✅ Aplicada no remoto |
 
-### Edge Functions (5)
-`delete-account`, `report-unsubscribe`, `send-monthly-report` (relatório mensal, usa `report_type`), `send-welcome-email`, `stripe-webhook` (payment link webhook — **deployado (v1, 2026-08-11)**, usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo — **env vars ainda por definir no remoto**).
+### Edge Functions (6)
+`delete-account`, `report-unsubscribe`, `send-monthly-report` (relatório mensal, usa `report_type`), `send-welcome-email`, `stripe-webhook` (payment link webhook — **deployado (v1, 2026-08-11)**, usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo — **env vars ainda por definir no remoto**), `svg-to-png` (conversão SVG → PNG serverless, resvg-wasm — a deployar).
 
 ### Email transacional
 - Relay SMTP: **`smtp-relay.brevo.com`** (Brevo), from padrão `no-reply@pocketapps.pt`.

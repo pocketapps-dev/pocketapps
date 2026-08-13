@@ -31,7 +31,7 @@ apps/
   pocket_shopping/      Shopping lists (stub)
 supabase/
   functions/            Shared edge functions (send-welcome-email, send-monthly-report,
-                        delete-account, report-unsubscribe)
+                        delete-account, report-unsubscribe, svg-to-png)
   schema.sql            Source of truth for the database schema
 scripts/
   cloudflare-email-routing.ps1  Cloudflare Email Routing setup (destinations + rules)
