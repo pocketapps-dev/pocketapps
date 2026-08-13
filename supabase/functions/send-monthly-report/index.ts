@@ -75,7 +75,7 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
     .eq("app_name", appName);
 
   const catIds = (categories || []).map((c: any) => c.id);
-  const catById = new Map((categories || []).map((c: any) => [c.id, c]));
+  const catById = new Map<string, { name: string; color_hex: string }>((categories || []).map((c: any) => [c.id, c]));
 
   let expenses: any[] = [];
   if (catIds.length > 0) {
@@ -96,7 +96,7 @@ async function fetchReportData(supabase: any, userId: string, appName: string, m
   let unique = 0;
   let count = 0;
   const byCategory = new Map<string, { amount: number; color: string }>();
-  const items: { name: string; amount: number; type: string; category: string; when: string }[] = [];
+  const items: { name: string; amount: number; type: string; category: string; when: string; color?: string }[] = [];
 
   const start = new Date(monthStart);
   const end = new Date(monthEnd);
@@ -306,73 +306,116 @@ function buildCategoryBarsHtml(data: any): string {
   </table>`;
 }
 
-function buildChartsHtml(data: any): string {
+function buildDonutChartSpec(data: any): { chart: any; width: number; height: number } | null {
+  if (!data.byCategory || data.byCategory.length === 0) return null;
+  const total = data.byCategory.reduce((s: number, [, { amount }]: [string, { amount: number }]) => s + amount, 0);
+  const chart = {
+    type: "doughnut",
+    data: {
+      labels: data.byCategory.map(([name]: [string, any]) => name),
+      datasets: [
+        {
+          data: data.byCategory.map(([, { amount }]: [string, { amount: number }]) => amount),
+          backgroundColor: data.byCategory.map(([, { color }]: [string, { color: string }]) => color),
+          borderColor: "#ffffff",
+          borderWidth: 3,
+          borderRadius: 8,
+          hoverOffset: 6,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: "74%",
+      plugins: {
+        legend: {
+          position: "bottom",
+          align: "center",
+          labels: {
+            color: "#374151",
+            font: { size: 11, family: "Inter, Arial, sans-serif", weight: "400" },
+            usePointStyle: true,
+            pointStyle: "circle",
+            boxWidth: 7,
+            boxHeight: 7,
+            padding: 10,
+          },
+        },
+        tooltip: {
+          backgroundColor: "#111827",
+          titleColor: "#f9fafb",
+          bodyColor: "#f9fafb",
+          cornerRadius: 8,
+          padding: 10,
+          boxPadding: 4,
+          callbacks: {
+            label: (context: any) => {
+              const value = context.parsed;
+              const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+              return ` ${context.label}: ${money(value)} (${pct}%)`;
+            },
+          },
+        },
+      },
+    },
+  };
+  return { chart, width: 520, height: 340 };
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+async function fetchDonutPng(data: any): Promise<Uint8Array | null> {
+  const spec = buildDonutChartSpec(data);
+  if (!spec) return null;
+  try {
+    const res = await fetch("https://quickchart.io/chart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chart: spec.chart, width: spec.width, height: spec.height, format: "png", devicePixelRatio: 2 }),
+    });
+    if (!res.ok) {
+      console.error(`[Charts] QuickChart erro: ${res.status} ${await res.text()}`);
+      return null;
+    }
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (error) {
+    console.error("[Charts] QuickChart falhou:", error);
+    return null;
+  }
+}
+
+function buildChartsHtml(data: any, donutSrc: string | null): string {
   if (data.byCategory.length === 0) {
     return `<h3 style="color:#111827; font-size:16px; margin:28px 0 8px 0;">Gráficos</h3>
       <p style="color:#9ca3af; font-size:13px; margin:0;">Sem despesas neste mês.</p>`;
   }
 
-  const total = data.total > 0 ? data.total : 1;
-  let acc = 0;
-  const stops = data.byCategory
-    .map(([name, { amount, color }]: [string, { amount: number; color: string }]) => {
-      const from = acc;
-      acc += (amount / total) * 100;
-      return `${color} ${from.toFixed(2)}% ${acc.toFixed(2)}%`;
-    })
-    .join(", ");
-
-  const legend = data.byCategory
-    .map(([name, { amount, color }]: [string, { amount: number; color: string }]) => {
-      const pct = total > 0 ? Math.round((amount / total) * 100) : 0;
-      return `<tr>
-        <td style="padding:4px 0; width:18px;"><div style="width:12px; height:12px; background-color:${color}; border-radius:3px;"></div></td>
-        <td style="padding:4px 8px; color:#374151; font-size:13px;">${escapeHtml(name)}</td>
-        <td style="padding:4px 0; text-align:right; color:#111827; font-size:13px; font-weight:600;">${money(amount)}</td>
-        <td style="padding:4px 0 4px 12px; text-align:right; color:#9ca3af; font-size:12px; width:44px;">${pct}%</td>
-      </tr>`;
-    })
-    .join("");
+  if (!donutSrc) {
+    return `<h3 style="color:#111827; font-size:16px; margin:28px 0 8px 0;">Gráficos</h3>${buildCategoryBarsHtml(data)}${buildSplitBarHtml(data)}`;
+  }
 
   return `<h3 style="color:#111827; font-size:16px; margin:28px 0 8px 0;">Gráficos</h3>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 0 0;">
+    <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
-        <td width="220" align="center" valign="middle">
-          <table width="190" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:190px; height:190px; border-radius:50%; background-color:#e5e7eb; background: conic-gradient(${stops});">
-            <table width="112" cellpadding="0" cellspacing="0"><tr><td align="center" valign="middle" style="width:112px; height:112px; border-radius:50%; background-color:#ffffff;">
-              <div style="font-size:15px; font-weight:700; color:#111827; line-height:1.3;">${money(data.total)}</div>
-              <div style="color:#6b7280; font-size:11px; margin-top:2px;">Total</div>
-            </td></tr></table>
-          </td></tr></table>
-        </td>
-        <td style="padding-left:16px; vertical-align:middle;">
-          <table width="100%" cellpadding="0" cellspacing="0">${legend}</table>
+        <td align="center" style="padding:8px 0 0 0;">
+          <img src="${donutSrc}" alt="Despesas por categoria" width="480" style="max-width:100%; height:auto; border:0; outline:none; text-decoration:none;">
         </td>
       </tr>
     </table>
-    ${buildCategoryBarsHtml(data)}
     ${buildSplitBarHtml(data)}`;
 }
 
-function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, unsubscribeUrl: string): string {
+function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, donutSrc: string | null, unsubscribeUrl: string): string {
   const label = monthLabel(monthStart);
 
-  const categoriesHtml = includeCategories && data.byCategory.length > 0
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
-       ${data.byCategory
-         .map(([name, { amount: amt, color }]: [string, { amount: number; color: string }]) => `
-           <tr>
-             <td style="padding:6px 0; width:20px;"><div style="width:12px; height:12px; border-radius:3px; background-color:${color};"></div></td>
-             <td style="padding:6px 0; color:#374151; font-size:14px;">${escapeHtml(name)}</td>
-             <td style="padding:6px 0; text-align:right; color:#111827; font-size:14px; font-weight:600;">${money(amt)}</td>
-           </tr>`)
-         .join("")}
-     </table>`
-    : "";
+  const chartsHtml = includeCharts ? buildChartsHtml(data, donutSrc) : "";
 
-  const chartsHtml = includeCharts ? buildChartsHtml(data) : "";
-
-  const bodyHtml = `${statsRowsHtml(data)}<h3 style="color:#111827; font-size:16px; margin:24px 0 8px 0;">Por categoria</h3>${categoriesHtml}<h3 style="color:#111827; font-size:16px; margin:48px 0 8px 0;">Despesas do mês</h3>${buildExpensesTableHtml(data.items)}${chartsHtml}`;
+  const bodyHtml = `${statsRowsHtml(data)}<h3 style="color:#111827; font-size:16px; margin:48px 0 8px 0;">Despesas do mês</h3>${buildExpensesTableHtml(data.items)}${chartsHtml}`;
   return buildShellHtml(
     `Relatório de ${label}`,
     `Olá ${userName}, aqui está o resumo das tuas despesas.`,
@@ -398,26 +441,6 @@ function hexToRgb(hex: string): any {
   return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
 }
 
-function donutSvgSegments(data: any, cx: number, cy: number, R: number, r: number): string[] {
-  const total = data.total > 0 ? data.total : 1;
-  let acc = -Math.PI / 2;
-  const paths: string[] = [];
-  for (const [name, { amount }] of data.byCategory) {
-    const seg = (amount / total) * 2 * Math.PI;
-    const from = acc;
-    const to = acc + seg;
-    const largeArc = seg > Math.PI ? 1 : 0;
-    const p0 = [cx + R * Math.cos(from), cy + R * Math.sin(from)];
-    const p1 = [cx + r * Math.cos(from), cy + r * Math.sin(from)];
-    const p2 = [cx + r * Math.cos(to), cy + r * Math.sin(to)];
-    const p3 = [cx + R * Math.cos(to), cy + R * Math.sin(to)];
-    const path = `M ${p0[0]} ${p0[1]} L ${p1[0]} ${p1[1]} A ${r} ${r} 0 ${largeArc} 1 ${p2[0]} ${p2[1]} L ${p3[0]} ${p3[1]} A ${R} ${R} 0 ${largeArc} 0 ${p0[0]} ${p0[1]} Z`;
-    paths.push(path);
-    acc = to;
-  }
-  return paths;
-}
-
 async function buildReportPdf(opts: {
   userName: string;
   data: any;
@@ -425,8 +448,9 @@ async function buildReportPdf(opts: {
   reportType: string;
   includeCategories: boolean;
   includeCharts: boolean;
+  donut?: { content: Uint8Array } | null;
 }): Promise<Uint8Array> {
-  const { userName, data, monthStart, reportType, includeCategories, includeCharts } = opts;
+  const { userName, data, monthStart, reportType, includeCategories, includeCharts, donut } = opts;
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -491,27 +515,6 @@ async function buildReportPdf(opts: {
   });
   y -= boxH + 26;
 
-  const drawCategoryList = (): void => {
-    ensureSpace(24);
-    page.drawText("Categoria", { x: margin, y, size: 10, font: bold, color: textGray });
-    page.drawText("Valor", { x: pageWidth - margin - 80, y, size: 10, font: bold, color: textGray });
-    y -= 12;
-    page.drawLine({ start: { x: margin, y }, end: { x: pageWidth - margin, y }, thickness: 0.5, color: lineColor });
-    y -= 16;
-    for (const [name, { amount: amt, color: hex }] of data.byCategory) {
-      ensureSpace(22);
-      page.drawRectangle({ x: margin, y: y - 6, width: 10, height: 10, color: hexToRgb(hex) || primary });
-      drawFitText(pdfSafe(name), margin + 16, y, pageWidth - margin * 2 - 16 - 90, 11, textDark);
-      drawFitText(pdfSafe(money(amt)), pageWidth - margin - 80, y, 80, 11, textDark, bold);
-      y -= 20;
-    }
-  };
-
-  if (reportType === "detailed" && includeCategories && data.byCategory.length > 0) {
-    sectionTitle("Por categoria");
-    drawCategoryList();
-  }
-
   if (reportType === "detailed" && data.items.length > 0) {
     sectionTitle("Despesas do mês", 18);
     ensureSpace(24);
@@ -540,13 +543,8 @@ async function buildReportPdf(opts: {
     const cx = margin + 80;
     const cy2 = y - 100;
     const R = 70;
-    const r = 40;
-    const segments = donutSvgSegments(data, cx, cy2, R, r);
-    for (let i = 0; i < segments.length; i++) {
-      const hex = data.byCategory[i][1].color;
-      page.drawSvgPath(segments[i], { color: hexToRgb(hex) || primary, borderColor: white, borderWidth: 2 });
-    }
-    drawFitText(pdfSafe(money(data.total)), cx - 40, cy2 - 6, 80, 12, textDark, bold);
+    const pngImage = donut?.content ? await doc.embedPng(donut.content) : null;
+    if (pngImage) page.drawImage(pngImage, { x: cx - 70, y: cy2 - 70, width: 140, height: 140 });
 
     let ly = cy2 + 36;
     for (const [name, { amount: amt, color: hex }] of data.byCategory) {
@@ -598,6 +596,21 @@ async function buildReportPdf(opts: {
   return doc.save();
 }
 
+function isLegacyServiceRoleJwt(jwt: string): boolean {
+  try {
+    const parts = jwt.split(".");
+    if (parts.length !== 3) return false;
+    let payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    while (payload.length % 4 !== 0) payload += "=";
+    const claims = JSON.parse(atob(payload));
+    if (claims?.role !== "service_role" || !claims?.ref) return false;
+    const url = Deno.env.get("SUPABASE_URL") ?? "";
+    return url.includes(`${claims.ref}.supabase.`) || url.startsWith(`https://${claims.ref}.`);
+  } catch {
+    return false;
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -607,11 +620,12 @@ serve(async (req: Request) => {
     const jwt = authHeader ? authHeader.replace(/^Bearer\s+/i, "").trim() : "";
     const apikey = req.headers.get("apikey") || "";
     const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const isServiceRole = (jwt && jwt === serviceRole) || (!jwt && apikey === serviceRole);
+    const bearerIsServiceRole = !!jwt && (jwt === serviceRole || isLegacyServiceRoleJwt(jwt));
+    const isServiceRole = bearerIsServiceRole || (!jwt && apikey === serviceRole);
 
     let supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      serviceRole,
+      bearerIsServiceRole && jwt ? jwt : serviceRole,
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
 
@@ -693,9 +707,17 @@ serve(async (req: Request) => {
 
       const userName = t.email.split("@")[0];
       const subject = `O teu relatório de ${monthLabel(monthStart)} 📊`;
+
+      const donutPng = reportType === "detailed" && includeCharts
+        ? await fetchDonutPng(data)
+        : null;
+      const donutSrc = donutPng
+        ? `data:image/png;base64,${bytesToBase64(donutPng)}`
+        : null;
+
       const html = reportType === "simple"
         ? buildSimpleReportHtml(userName, data, monthStart, unsubscribeUrl)
-        : buildDetailedReportHtml(userName, data, monthStart, includeCategories, includeCharts, unsubscribeUrl);
+        : buildDetailedReportHtml(userName, data, monthStart, includeCategories, includeCharts, donutSrc, unsubscribeUrl);
 
       const attachments: any[] = [];
       try {
@@ -706,6 +728,7 @@ serve(async (req: Request) => {
           reportType,
           includeCategories,
           includeCharts,
+          donut: donutPng ? { content: donutPng } : null,
         });
         attachments.push({
           filename: `relatorio-${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}.pdf`,

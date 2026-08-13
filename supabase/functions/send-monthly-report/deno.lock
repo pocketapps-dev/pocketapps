@@ -1,0 +1,20 @@
+{
+  "version": "5",
+  "specifiers": {
+    "npm:nodemailer@6.9.16": "6.9.16"
+  },
+  "npm": {
+    "nodemailer@6.9.16": {
+      "integrity": "sha512-psAuZdTIRN08HKVd/E8ObdV6NO7NTBY3KsC30F7M4H1OnmLCUNaS56FpYxyb26zWLSyYF9Ozch9KYHhHegsiOQ=="
+    }
+  },
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.112.3"
+  },
+  "remote": {
+    "https://deno.land/std@0.208.0/async/delay.ts": "a6142eb44cdd856b645086af2b811b1fcce08ec06bb7d50969e6a872ee9b8659",
+    "https://deno.land/std@0.208.0/http/server.ts": "f3cde6672e631d3e00785743cfa96bfed275618c0352c5ae84abbe5a2e0e4afc",
+    "https://esm.sh/@supabase/supabase-js@2.112.3": "f6b9130984301066587e8917dfab3b3d60be47dc966bd3d04c733bc9423c1cf9",
+    "https://esm.sh/pdf-lib@1.17.1": "cf7c5527829cb9bbb3aa20d339c530067441c10eb98880360aea9e77c3c87ff8"
+  }
+}
