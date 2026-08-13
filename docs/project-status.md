@@ -1,7 +1,7 @@
 # PocketApps — Estado Global do Projeto
 
 > Resumo completo do monorepo: o que existe, o que está em progresso e o que falta.
-> Atualizado em 2026-08-11.
+> Atualizado em 2026-08-13.
 
 ## 1. Visão geral
 
@@ -85,7 +85,7 @@ TODO.md                   → Tarefas A/B/C concluídas
 | `007_themes_order_free_first.sql` | Renumera `sort_order` dos temas (gratuitos `light`/`default`/`dark` primeiro) + `get_user_themes` com ordenação free-first | ✅ Aplicada no remoto |
 
 ### Edge Functions (6)
-`delete-account`, `report-unsubscribe`, `send-monthly-report` (relatório mensal, usa `report_type`), `send-welcome-email`, `stripe-webhook` (payment link webhook — **deployado (v1, 2026-08-11)**, usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo — **env vars ainda por definir no remoto**), `svg-to-png` (conversão SVG → PNG serverless, resvg-wasm — a deployar).
+`delete-account`, `report-unsubscribe`, `send-monthly-report` (relatório mensal, usa `report_type`), `send-welcome-email`, `stripe-webhook` (payment link webhook — **deployado (v1, 2026-08-11)**, usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo — **env vars ainda por definir no remoto**), `svg-to-png` (conversão SVG → PNG serverless, resvg-wasm — **deployado (v1, 2026-08-13)**).
 
 ### Email transacional
 - Relay SMTP: **`smtp-relay.brevo.com`** (Brevo), from padrão `no-reply@pocketapps.pt`.

@@ -1,7 +1,7 @@
 # PocketApps — Backend (Supabase)
 
 > Backend partilhado: Postgres (schema + RPCs) + Edge Functions (Deno) + email transacional.
-> Atualizado em 2026-08-11.
+> Atualizado em 2026-08-13.
 
 ## Projeto remoto
 
@@ -47,11 +47,11 @@ RLS ativado nas tabelas principais. Índices optimizados por `user_id`/`app_name
 | `delete-account` | 47 | true | `deno.json` | Confirmação de eliminação de conta |
 | `report-unsubscribe` | 5 | false | — | Unsubscribe do relatório (não envia email) |
 | `stripe-webhook` | 1 | false | `deno.json` | Webhook `checkout.session.completed` — ✅ deployado (v1, 2026-08-11) |
-| `svg-to-png` | — (a deployar) | true | `deno.json` | Conversão SVG → PNG (resvg-wasm); payload `{ svg, width, height, fontUrls }` |
+| `svg-to-png` | 1 | true | `deno.json` | Conversão SVG → PNG (resvg-wasm); payload `{ svg, width, height }` |
 
 `stripe-webhook` (deployado v1, 2026-08-11) usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo — **env vars ainda por definir no remoto**: o `index.ts` faz `new Stripe(STRIPE_SECRET_KEY ?? '')` no topo, pelo que rebenta ao arrancar sem chave; definir os secrets antes do primeiro evento real. SDK Stripe `npm:stripe@17.7.0` (import map `deno.json`), `apiVersion: "2024-12-18.acacia"`.
 
-`svg-to-png` (a deployar, ~2 MB — wasm ~1.7 MB) converte SVG → PNG com `@resvg/resvg-wasm` (import map `deno.json`, `npm:@resvg/resvg-wasm@2.6.2`). Notas: `width`/`height` do payload são aceites mas ignorados (render original via `fitTo: original`); fontes default NanumGothic Regular/Bold; só POST (405), `svg` ausente (400), >200 000 chars (413). Resposta `image/png` com `Cache-Control: public, max-age=3600`.
+`svg-to-png` (deployado v1, 2026-08-13) converte SVG → PNG com `@resvg/resvg-wasm` (import map `deno.json`, `npm:@resvg/resvg-wasm@2.6.2`; wasm `index_bg.wasm` + fonte NanumGothic Regular carregadas do jsDelivr). Render: `fitTo` zoom x2 por defeito; se `width` e `height` forem enviados, passa a `fitTo: width`. `svg` ausente (400), >200 000 chars (400 "SVG demasiado grande (max 200KB)"), erros → 500. Resposta `image/png` com `Cache-Control: public, max-age=3600`. `verify_jwt: true`.
 
 ## Email transacional
 
