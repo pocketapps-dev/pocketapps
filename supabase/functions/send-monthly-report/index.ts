@@ -344,6 +344,7 @@ function buildDonutChartSpec(data: any): { chart: any; width: number; height: nu
           },
         },
         tooltip: { enabled: false },
+        datalabels: { display: false },
       },
     },
   };
