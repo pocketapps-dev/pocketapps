@@ -486,8 +486,6 @@ create table public.report_preferences (
   report_day              integer not null default 28 check (report_day between 1 and 28),
   report_hour             integer not null default 9 check (report_hour between 0 and 23),
   report_type             text not null default 'detailed' check (report_type in ('simple', 'detailed')),
-  include_categories      boolean not null default true,
-  include_charts          boolean not null default true,
   unsubscribe_token       uuid default gen_random_uuid(),
   created_at              timestamptz not null default now(),
   updated_at              timestamptz not null default now(),
