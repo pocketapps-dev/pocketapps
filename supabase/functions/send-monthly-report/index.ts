@@ -313,7 +313,7 @@ function buildDonutChartSpec(data: any): { chart: any; width: number; height: nu
   const chart = {
     type: "doughnut",
     data: {
-      labels: entries.map(([name]: [string, any]) => name),
+      labels: entries.map(([, c]: [string, any]) => `${Math.round((c.amount / total) * 100)}%`),
       datasets: [
         {
           data: entries.map(([, c]: [string, any]) => c.amount),
@@ -331,19 +331,23 @@ function buildDonutChartSpec(data: any): { chart: any; width: number; height: nu
       cutout: "72%",
       layout: { padding: 10 },
       plugins: {
-        legend: { display: false },
-        tooltip: { enabled: false },
-        datalabels: {
-          display: `function(ctx) { return ctx.dataset.data[ctx.dataIndex] / ${total} >= 0.06; }`,
-          formatter: `function(value) { return Math.round(value / ${total} * 100) + '%'; }`,
-          color: "#ffffff",
-          font: { family: "Arial", size: 13, weight: "bold" },
-          textAlign: "center",
+        legend: {
+          display: true,
+          position: "right",
+          align: "center",
+          labels: {
+            boxWidth: 12,
+            boxHeight: 12,
+            padding: 10,
+            color: "#334155",
+            font: { family: "Arial", size: 13 },
+          },
         },
+        tooltip: { enabled: false },
       },
     },
   };
-  return { chart, width: 340, height: 340 };
+  return { chart, width: 600, height: 340 };
 }
 
 const CHARTS_BUCKET = "report-charts";
@@ -428,14 +432,12 @@ function buildChartsHtml(data: any, donutUrl: string | null): string {
   return `<h3 style="color:#111827; font-size:16px; margin:28px 0 8px 0;">Gráficos</h3>
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
-        <td width="52%" align="center" valign="middle" style="padding:4px 6px 0 0;">
-          <img src="${donutUrl}" alt="Despesas por categoria" width="290" style="width:290px; max-width:100%; height:auto; border:0; outline:none; text-decoration:none; display:block; margin:0 auto;">
-        </td>
-        <td width="48%" valign="middle" style="padding:4px 0 0 6px;">
-          ${buildDonutLegendHtml(data)}
+        <td align="center" style="padding:4px 0 10px 0;">
+          <img src="${donutUrl}" alt="Despesas por categoria" width="480" style="width:480px; max-width:100%; height:auto; border:0; outline:none; text-decoration:none; display:block; margin:0 auto;">
         </td>
       </tr>
     </table>
+    ${buildDonutLegendHtml(data)}
     ${buildSplitBarHtml(data)}`;
 }
 
@@ -569,13 +571,14 @@ async function buildReportPdf(opts: {
 
     const pngImage = donut?.content ? await doc.embedPng(donut.content) : null;
     if (pngImage) {
-      const w = 190;
-      const h = 190;
+      const w = 330;
+      const h = Math.round((w * 340) / 600);
       ensureSpace(h + 16);
       page.drawImage(pngImage, { x: margin, y: y - h, width: w, height: h });
-      const cardX = margin + w + 18;
-      const cardW = pageWidth - margin - cardX;
-      let ly = y - 6;
+      y -= h + 14;
+      const cardX = margin;
+      const cardW = pageWidth - margin * 2;
+      let ly = y;
       for (const [name, c] of data.byCategory as [string, any][]) {
         ensureSpace(34);
         if (ly - 30 < margin) break;
@@ -587,7 +590,7 @@ async function buildReportPdf(opts: {
         page.drawText(vt, { x: cardX + cardW - 10 - vw, y: ly - 19, size: 10, font: bold, color: textGray });
         ly -= 32;
       }
-      y = Math.min(y - h, ly) - 14;
+      y = ly - 14;
     }
 
     ensureSpace(70);
