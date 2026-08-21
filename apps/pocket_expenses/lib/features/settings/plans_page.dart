@@ -100,7 +100,7 @@ class PlansPage extends ConsumerWidget {
             priceNote: 'para sempre',
             features: const [
               'Todas as funcionalidades base',
-              'Categorias ilimitadas',
+              'Até 10 categorias',
               'Backup manual',
               'Notificações',
               'Sem anúncios',
@@ -115,6 +115,7 @@ class PlansPage extends ConsumerWidget {
             priceNote: 'por ano · €1.49/mês',
             features: const [
               'Tudo do Free',
+              'Categorias ilimitadas',
               'Relatórios por email',
               'Backup automático na cloud',
               'Exportar dados avançado',

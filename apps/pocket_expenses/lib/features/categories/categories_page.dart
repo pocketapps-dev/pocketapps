@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/category.dart';
 import '../../core/providers/category_provider.dart';
+import '../../core/providers/subscription_provider.dart';
+import '../settings/plans_page.dart';
+
+const kFreeCategoryLimit = 10;
 
 const _iconMap = <String, IconData>{
   'home': Icons.home,
@@ -116,6 +120,8 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider('expenses'));
+    final subscription = ref.watch(subscriptionProvider).asData?.value;
+    final isPremium = subscription?.isActive == true;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Categorias')),
@@ -126,62 +132,118 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
           if (categories.isEmpty) {
             return const Center(child: Text('Sem categorias'));
           }
-          return ReorderableListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            buildDefaultDragHandles: false,
-            itemCount: categories.length,
-            onReorderItem: (oldIndex, newIndex) {
-              final ids = categories.map((c) => c.id).toList();
-              final id = ids.removeAt(oldIndex);
-              ids.insert(newIndex, id);
-              ref.read(categoryActionsProvider).reorder(ids);
-            },
-            itemBuilder: (context, index) {
-              final cat = categories[index];
-              final isUncategorized = cat.name == 'Sem Categoria';
-              final color = Color(
-                int.parse('FF${cat.colorHex.replaceAll('#', '')}', radix: 16),
-              );
-              final icon = _iconMap[cat.iconName] ?? Icons.category;
+          return Column(
+            children: [
+              if (!isPremium) _FreeLimitBanner(count: categories.length),
+              Expanded(
+                child: ReorderableListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  buildDefaultDragHandles: false,
+                  itemCount: categories.length,
+                  onReorderItem: (oldIndex, newIndex) {
+                    final ids = categories.map((c) => c.id).toList();
+                    final id = ids.removeAt(oldIndex);
+                    ids.insert(newIndex, id);
+                    ref.read(categoryActionsProvider).reorder(ids);
+                  },
+                  itemBuilder: (context, index) {
+                    final cat = categories[index];
+                    final isUncategorized = cat.name == 'Sem Categoria';
+                    final color = Color(
+                      int.parse(
+                        'FF${cat.colorHex.replaceAll('#', '')}',
+                        radix: 16,
+                      ),
+                    );
+                    final icon = _iconMap[cat.iconName] ?? Icons.category;
 
-              return ListTile(
-                key: ValueKey(cat.id),
-                leading: CircleAvatar(
-                  backgroundColor: color,
-                  child: Icon(icon, color: Colors.white, size: 22),
-                ),
-                title: Text(cat.name),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (!isUncategorized)
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete,
-                          size: 20,
-                          color: Colors.red,
-                        ),
-                        onPressed: () =>
-                            _confirmDelete(context, ref, cat.id, cat.name),
+                    return ListTile(
+                      key: ValueKey(cat.id),
+                      leading: CircleAvatar(
+                        backgroundColor: color,
+                        child: Icon(icon, color: Colors.white, size: 22),
                       ),
-                    if (!isUncategorized)
-                      ReorderableDragStartListener(
-                        index: index,
-                        child: const Icon(Icons.drag_handle),
+                      title: Text(cat.name),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!isUncategorized)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete,
+                                size: 20,
+                                color: Colors.red,
+                              ),
+                              onPressed: () => _confirmDelete(
+                                context,
+                                ref,
+                                cat.id,
+                                cat.name,
+                              ),
+                            ),
+                          if (!isUncategorized)
+                            ReorderableDragStartListener(
+                              index: index,
+                              child: const Icon(Icons.drag_handle),
+                            ),
+                        ],
                       ),
-                  ],
+                      onTap: isUncategorized
+                          ? null
+                          : () =>
+                                _showCategoryDialog(context, ref, category: cat),
+                    );
+                  },
                 ),
-                onTap: isUncategorized ? null : () => _showCategoryDialog(context, ref, category: cat),
-              );
-            },
+              ),
+            ],
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCategoryDialog(context, ref),
+        onPressed: () => _onAddPressed(context),
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  void _onAddPressed(BuildContext context) {
+    final subscription = ref.read(subscriptionProvider).asData?.value;
+    final isPremium = subscription?.isActive == true;
+    final count =
+        ref.read(categoriesProvider('expenses')).asData?.value.length ?? 0;
+
+    if (!isPremium && count >= kFreeCategoryLimit) {
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Limite do plano Free'),
+          content: Text(
+            'O plano Free permite até $kFreeCategoryLimit categorias.\n\n'
+            'Subscreve o plano Premium para criar categorias ilimitadas.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Fechar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PlansPage()),
+                );
+              },
+              child: const Text('Ver Premium'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    _showCategoryDialog(context, ref);
   }
 
   void _showCategoryDialog(
@@ -478,6 +540,53 @@ class _CategoriesPageState extends ConsumerState<CategoriesPage> {
             child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FreeLimitBanner extends StatelessWidget {
+  const _FreeLimitBanner({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = kFreeCategoryLimit - count;
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PlansPage()),
+      ),
+      child: Container(
+        width: double.infinity,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            Icon(
+              Icons.workspace_premium,
+              size: 18,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                remaining > 0
+                    ? '$count/$kFreeCategoryLimit categorias no plano Free · restam $remaining'
+                    : 'Limite do plano Free atingido',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            Text(
+              'Ver Premium',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
