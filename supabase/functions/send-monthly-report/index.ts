@@ -308,7 +308,6 @@ function buildCategoryBarsHtml(data: any): string {
 
 function buildDonutChartSpec(data: any): { chart: any; width: number; height: number } | null {
   if (!data.byCategory || data.byCategory.length === 0) return null;
-  const total = data.byCategory.reduce((s: number, [, { amount }]: [string, { amount: number }]) => s + amount, 0);
   const chart = {
     type: "doughnut",
     data: {
@@ -318,52 +317,25 @@ function buildDonutChartSpec(data: any): { chart: any; width: number; height: nu
           data: data.byCategory.map(([, { amount }]: [string, { amount: number }]) => amount),
           backgroundColor: data.byCategory.map(([, { color }]: [string, { color: string }]) => color),
           borderColor: "#ffffff",
-          borderWidth: 3,
-          borderRadius: 8,
-          hoverOffset: 6,
+          borderWidth: 4,
+          borderRadius: 10,
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      cutout: "74%",
+      cutout: "70%",
+      layout: { padding: 6 },
       plugins: {
-        legend: {
-          position: "bottom",
-          align: "center",
-          labels: {
-            color: "#374151",
-            font: { size: 11, family: "Inter, Arial, sans-serif", weight: "400" },
-            usePointStyle: true,
-            pointStyle: "circle",
-            boxWidth: 7,
-            boxHeight: 7,
-            padding: 10,
-          },
-        },
-        tooltip: {
-          backgroundColor: "#111827",
-          titleColor: "#f9fafb",
-          bodyColor: "#f9fafb",
-          cornerRadius: 8,
-          padding: 10,
-          boxPadding: 4,
-          callbacks: {
-            label: (context: any) => {
-              const value = context.parsed;
-              const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-              return ` ${context.label}: ${money(value)} (${pct}%)`;
-            },
-          },
-        },
+        legend: { display: false },
       },
     },
   };
-  return { chart, width: 520, height: 340 };
+  return { chart, width: 320, height: 320 };
 }
 
-const DONUT_CID = "donut-chart";
+const CHARTS_BUCKET = "report-charts";
 
 async function fetchDonutPng(data: any): Promise<Uint8Array | null> {
   const spec = buildDonutChartSpec(data);
@@ -385,31 +357,76 @@ async function fetchDonutPng(data: any): Promise<Uint8Array | null> {
   }
 }
 
-function buildChartsHtml(data: any, hasDonut: boolean): string {
+async function uploadDonutPng(png: Uint8Array, userId: string, monthStart: Date): Promise<string | null> {
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+  try {
+    await admin.storage.createBucket(CHARTS_BUCKET, { public: true }).catch(() => {});
+    const path = `donuts/${userId}-${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}.png`;
+    const { error } = await admin.storage.from(CHARTS_BUCKET).upload(path, png, {
+      contentType: "image/png",
+      upsert: true,
+      cacheControl: "86400",
+    });
+    if (error) {
+      console.error("[Charts] Upload Storage falhou:", error.message);
+      return null;
+    }
+    return `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/${CHARTS_BUCKET}/${path}`;
+  } catch (error) {
+    console.error("[Charts] Storage indisponível:", error);
+    return null;
+  }
+}
+
+function buildDonutLegendHtml(data: any): string {
+  const total = data.byCategory.reduce((s: number, [, c]: [string, any]) => s + c.amount, 0) || 1;
+  const rows = data.byCategory
+    .map(([name, c]: [string, any]) => {
+      const pct = Math.round((c.amount / total) * 100);
+      return `<tr>
+        <td style="padding:5px 0; vertical-align:middle; white-space:nowrap;">
+          <span style="display:inline-block; width:10px; height:10px; border-radius:3px; background-color:${c.color}; margin-right:8px;"></span>
+          <span style="color:#374151; font-size:13px;">${escapeHtml(name)}</span>
+        </td>
+        <td align="right" style="padding:5px 0 5px 12px; color:#111827; font-size:13px; font-weight:bold; white-space:nowrap;">${money(c.amount)}<span style="color:#9ca3af; font-weight:normal;">&nbsp;&nbsp;${pct}%</span></td>
+      </tr>`;
+    })
+    .join("");
+  return `<table cellpadding="0" cellspacing="0" border="0" width="100%">${rows}</table>`;
+}
+
+function buildChartsHtml(data: any, donutUrl: string | null): string {
   if (data.byCategory.length === 0) {
     return `<h3 style="color:#111827; font-size:16px; margin:28px 0 8px 0;">Gráficos</h3>
       <p style="color:#9ca3af; font-size:13px; margin:0;">Sem despesas neste mês.</p>`;
   }
 
-  if (!hasDonut) {
+  if (!donutUrl) {
     return `<h3 style="color:#111827; font-size:16px; margin:28px 0 8px 0;">Gráficos</h3>${buildCategoryBarsHtml(data)}${buildSplitBarHtml(data)}`;
   }
 
   return `<h3 style="color:#111827; font-size:16px; margin:28px 0 8px 0;">Gráficos</h3>
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
-        <td align="center" style="padding:8px 0 0 0;">
-          <img src="cid:${DONUT_CID}" alt="Despesas por categoria" width="480" style="width:480px; max-width:100%; height:auto; border:0; outline:none; text-decoration:none; display:block; margin:0 auto;">
+        <td width="52%" align="center" valign="middle" style="padding:4px 6px 0 0;">
+          <img src="${donutUrl}" alt="Despesas por categoria" width="290" style="width:290px; max-width:100%; height:auto; border:0; outline:none; text-decoration:none; display:block; margin:0 auto;">
+        </td>
+        <td width="48%" valign="middle" style="padding:4px 0 0 6px;">
+          ${buildDonutLegendHtml(data)}
         </td>
       </tr>
     </table>
     ${buildSplitBarHtml(data)}`;
 }
 
-function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, hasDonut: boolean, unsubscribeUrl: string): string {
+function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, donutUrl: string | null, unsubscribeUrl: string): string {
   const label = monthLabel(monthStart);
 
-  const chartsHtml = includeCharts ? buildChartsHtml(data, hasDonut) : "";
+  const chartsHtml = includeCharts ? buildChartsHtml(data, donutUrl) : "";
 
   const bodyHtml = `${statsRowsHtml(data)}<h3 style="color:#111827; font-size:16px; margin:48px 0 8px 0;">Despesas do mês</h3>${buildExpensesTableHtml(data.items)}${chartsHtml}`;
   return buildShellHtml(
@@ -418,6 +435,13 @@ function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, 
     bodyHtml,
     unsubscribeUrl,
   );
+}
+
+function hexToRgb(hex: string): any {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex ?? ""));
+  if (!m) return rgb(0.5, 0.5, 0.5);
+  const n = parseInt(m[1], 16);
+  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
 }
 
 function pdfSafe(text: string): string {
@@ -529,10 +553,20 @@ async function buildReportPdf(opts: {
 
     const pngImage = donut?.content ? await doc.embedPng(donut.content) : null;
     if (pngImage) {
-      const w = 320;
-      const h = Math.round(w * (340 / 520));
+      const w = 190;
+      const h = 190;
       ensureSpace(h + 16);
-      page.drawImage(pngImage, { x: (pageWidth - w) / 2, y: y - h, width: w, height: h });
+      page.drawImage(pngImage, { x: margin, y: y - h, width: w, height: h });
+      const catTotal = data.byCategory.reduce((s: number, [, c]: [string, any]) => s + c.amount, 0) || 1;
+      let ly = y - 12;
+      for (const [name, c] of data.byCategory as [string, any][]) {
+        if (ly - 10 < margin) break;
+        const pct = Math.round((c.amount / catTotal) * 100);
+        page.drawRectangle({ x: margin + w + 18, y: ly - 3, width: 9, height: 9, color: hexToRgb(c.color) });
+        drawFitText(pdfSafe(name), margin + w + 32, ly, 90, 10, textDark);
+        drawFitText(`${pdfSafe(money(c.amount))} (${pct}%)`, margin + w + 128, ly, pageWidth - margin * 2 - w - 128, 10, textGray, bold);
+        ly -= 20;
+      }
       y -= h + 24;
     }
 
@@ -672,24 +706,19 @@ serve(async (req: Request) => {
       const userName = t.email.split("@")[0];
       const subject = `O teu relatório de ${monthLabel(monthStart)} 📊`;
 
+      let donutUrl: string | null = null;
       const donutPng = reportType === "detailed" && includeCharts
         ? await fetchDonutPng(data)
         : null;
+      if (donutPng) {
+        donutUrl = await uploadDonutPng(donutPng, t.user_id, monthStart);
+      }
 
       const html = reportType === "simple"
         ? buildSimpleReportHtml(userName, data, monthStart, unsubscribeUrl)
-        : buildDetailedReportHtml(userName, data, monthStart, includeCategories, includeCharts, !!donutPng, unsubscribeUrl);
+        : buildDetailedReportHtml(userName, data, monthStart, includeCategories, includeCharts, donutUrl, unsubscribeUrl);
 
       const attachments: any[] = [];
-      if (donutPng) {
-        attachments.push({
-          filename: "donut.png",
-          content: donutPng,
-          cid: DONUT_CID,
-          contentType: "image/png",
-          contentDisposition: "inline",
-        });
-      }
       try {
         const pdfBytes = await buildReportPdf({
           userName,
