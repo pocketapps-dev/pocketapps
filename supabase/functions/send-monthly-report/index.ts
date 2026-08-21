@@ -306,69 +306,71 @@ function buildCategoryBarsHtml(data: any): string {
   </table>`;
 }
 
-function buildDonutChartSpec(data: any): { chart: any; width: number; height: number } | null {
+function buildDonutSvg(data: any): string | null {
   if (!data.byCategory || data.byCategory.length === 0) return null;
   const entries = data.byCategory as [string, any][];
   const total = entries.reduce((s: number, [, c]: [string, any]) => s + c.amount, 0) || 1;
-  const chart = {
-    type: "doughnut",
-    data: {
-      labels: entries.map(([, c]: [string, any]) => `${Math.round((c.amount / total) * 100)}%`),
-      datasets: [
-        {
-          data: entries.map(([, c]: [string, any]) => c.amount),
-          backgroundColor: entries.map(([, c]: [string, any]) => c.color),
-          borderColor: "#ffffff",
-          borderWidth: 0,
-          borderRadius: 14,
-          spacing: 3,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      cutout: "72%",
-      layout: { padding: 10 },
-      plugins: {
-        legend: {
-          display: true,
-          position: "right",
-          align: "center",
-          labels: {
-            boxWidth: 12,
-            boxHeight: 12,
-            padding: 10,
-            color: "#334155",
-            font: { family: "Arial", size: 13 },
-          },
-        },
-        tooltip: { enabled: false },
-        datalabels: { display: false },
-      },
-    },
-  };
-  return { chart, width: 600, height: 340 };
+
+  const cx = 170;
+  const cy = 170;
+  const r = 146;
+  const sw = 46;
+  const gap = 4;
+  const circ = 2 * Math.PI * r;
+
+  const rings: string[] = [];
+  const labels: string[] = [];
+  let acc = 0;
+  for (const [, c] of entries) {
+    const frac = c.amount / total;
+    if (frac >= 0.999) {
+      rings.push(`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c.color}" stroke-width="${sw}"/>`);
+      acc += circ;
+      continue;
+    }
+    const len = Math.max(frac * circ - gap, 0.5);
+    const rot = (acc / circ) * 360 - 90;
+    rings.push(
+      `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c.color}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(2)} ${(circ - len).toFixed(2)}" transform="rotate(${rot.toFixed(3)} ${cx} ${cy})"/>`,
+    );
+    const pct = Math.round(frac * 100);
+    if (pct >= 6) {
+      const midDeg = ((acc + (frac * circ) / 2) / circ) * 360 - 90;
+      const rad = (midDeg * Math.PI) / 180;
+      const tx = cx + r * Math.cos(rad);
+      const ty = cy + r * Math.sin(rad);
+      labels.push(
+        `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" dy="0.35em" font-family="NanumGothic" font-size="22" font-weight="bold" fill="#ffffff" text-anchor="middle">${pct}%</text>`,
+      );
+    }
+    acc += frac * circ;
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="340" height="340" viewBox="0 0 340 340">${rings.join("")}${labels.join("")}</svg>`;
 }
 
 const CHARTS_BUCKET = "report-charts";
 
 async function fetchDonutPng(data: any): Promise<Uint8Array | null> {
-  const spec = buildDonutChartSpec(data);
-  if (!spec) return null;
+  const svg = buildDonutSvg(data);
+  if (!svg) return null;
   try {
-    const res = await fetch("https://quickchart.io/chart", {
+    const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/svg-to-png`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chart: spec.chart, version: "4.4.1", width: spec.width, height: spec.height, format: "png", devicePixelRatio: 2 }),
+      headers: {
+        "Content-Type": "application/json",
+        apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+      },
+      body: JSON.stringify({ svg, width: 680 }),
     });
     if (!res.ok) {
-      console.error(`[Charts] QuickChart erro: ${res.status} ${await res.text()}`);
+      console.error(`[Charts] svg-to-png erro: ${res.status} ${await res.text()}`);
       return null;
     }
     return new Uint8Array(await res.arrayBuffer());
   } catch (error) {
-    console.error("[Charts] QuickChart falhou:", error);
+    console.error("[Charts] svg-to-png falhou:", error);
     return null;
   }
 }
@@ -434,7 +436,7 @@ function buildChartsHtml(data: any, donutUrl: string | null): string {
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center" style="padding:4px 0 10px 0;">
-          <img src="${donutUrl}" alt="Despesas por categoria" width="480" style="width:480px; max-width:100%; height:auto; border:0; outline:none; text-decoration:none; display:block; margin:0 auto;">
+          <img src="${donutUrl}" alt="Despesas por categoria" width="320" style="width:320px; max-width:100%; height:auto; border:0; outline:none; text-decoration:none; display:block; margin:0 auto;">
         </td>
       </tr>
     </table>
@@ -572,8 +574,8 @@ async function buildReportPdf(opts: {
 
     const pngImage = donut?.content ? await doc.embedPng(donut.content) : null;
     if (pngImage) {
-      const w = 330;
-      const h = Math.round((w * 340) / 600);
+      const w = 200;
+      const h = 200;
       ensureSpace(h + 16);
       page.drawImage(pngImage, { x: margin, y: y - h, width: w, height: h });
       y -= h + 14;
