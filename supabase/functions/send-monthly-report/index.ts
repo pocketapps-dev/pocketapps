@@ -363,11 +363,7 @@ function buildDonutChartSpec(data: any): { chart: any; width: number; height: nu
   return { chart, width: 520, height: 340 };
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
-}
+const DONUT_CID = "donut-chart";
 
 async function fetchDonutPng(data: any): Promise<Uint8Array | null> {
   const spec = buildDonutChartSpec(data);
@@ -389,13 +385,13 @@ async function fetchDonutPng(data: any): Promise<Uint8Array | null> {
   }
 }
 
-function buildChartsHtml(data: any, donutSrc: string | null): string {
+function buildChartsHtml(data: any, hasDonut: boolean): string {
   if (data.byCategory.length === 0) {
     return `<h3 style="color:#111827; font-size:16px; margin:28px 0 8px 0;">Gráficos</h3>
       <p style="color:#9ca3af; font-size:13px; margin:0;">Sem despesas neste mês.</p>`;
   }
 
-  if (!donutSrc) {
+  if (!hasDonut) {
     return `<h3 style="color:#111827; font-size:16px; margin:28px 0 8px 0;">Gráficos</h3>${buildCategoryBarsHtml(data)}${buildSplitBarHtml(data)}`;
   }
 
@@ -403,17 +399,17 @@ function buildChartsHtml(data: any, donutSrc: string | null): string {
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center" style="padding:8px 0 0 0;">
-          <img src="${donutSrc}" alt="Despesas por categoria" width="480" style="max-width:100%; height:auto; border:0; outline:none; text-decoration:none;">
+          <img src="cid:${DONUT_CID}" alt="Despesas por categoria" width="480" style="width:480px; max-width:100%; height:auto; border:0; outline:none; text-decoration:none; display:block; margin:0 auto;">
         </td>
       </tr>
     </table>
     ${buildSplitBarHtml(data)}`;
 }
 
-function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, donutSrc: string | null, unsubscribeUrl: string): string {
+function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, hasDonut: boolean, unsubscribeUrl: string): string {
   const label = monthLabel(monthStart);
 
-  const chartsHtml = includeCharts ? buildChartsHtml(data, donutSrc) : "";
+  const chartsHtml = includeCharts ? buildChartsHtml(data, hasDonut) : "";
 
   const bodyHtml = `${statsRowsHtml(data)}<h3 style="color:#111827; font-size:16px; margin:48px 0 8px 0;">Despesas do mês</h3>${buildExpensesTableHtml(data.items)}${chartsHtml}`;
   return buildShellHtml(
@@ -432,13 +428,6 @@ function pdfSafe(text: string): string {
     .replace(/·/g, "-")
     .replace(/…/g, "...")
     .replace(/[^\x00-\xFF\u20AC]/g, "");
-}
-
-function hexToRgb(hex: string): any {
-  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim());
-  if (!m) return null;
-  const n = parseInt(m[1], 16);
-  return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
 }
 
 async function buildReportPdf(opts: {
@@ -536,40 +525,15 @@ async function buildReportPdf(opts: {
   }
 
   if (includeCharts && data.byCategory.length > 0) {
-    const legendRows = data.byCategory.length;
-    ensureSpace(220 + legendRows * 17);
     sectionTitle("Gráficos");
 
-    const cx = margin + 80;
-    const cy2 = y - 100;
-    const R = 70;
     const pngImage = donut?.content ? await doc.embedPng(donut.content) : null;
-    if (pngImage) page.drawImage(pngImage, { x: cx - 70, y: cy2 - 70, width: 140, height: 140 });
-
-    let ly = cy2 + 36;
-    for (const [name, { amount: amt, color: hex }] of data.byCategory) {
-      page.drawRectangle({ x: cx + R + 24, y: ly - 9, width: 10, height: 10, color: hexToRgb(hex) || primary });
-      drawFitText(pdfSafe(name), cx + R + 40, ly, 130, 10, textDark);
-      drawFitText(pdfSafe(money(amt)), cx + R + 170, ly, 70, 10, textDark, bold);
-      ly -= 17;
-    }
-    y = Math.min(cy2 - R - 24, ly - 8);
-
-    ensureSpace(24 + data.byCategory.length * 18);
-    page.drawText("Despesas por categoria", { x: margin, y, size: 11, font: bold, color: textDark });
-    y -= 20;
-    const barTotal = data.total > 0 ? data.total : 1;
-    const barX = margin + 116;
-    const barW = pageWidth - margin - 44 - barX;
-    for (const [name, { amount: amt, color: hex }] of data.byCategory) {
-      ensureSpace(24);
-      drawFitText(pdfSafe(name), margin, y, 108, 10, textDark);
-      const pct = Math.round((amt / barTotal) * 100);
-      const fillW = Math.max(0, (amt / barTotal) * barW);
-      page.drawRectangle({ x: barX, y: y - 6, width: barW, height: 10, color: lineColor });
-      page.drawRectangle({ x: barX, y: y - 6, width: fillW, height: 10, color: hexToRgb(hex) || primary });
-      drawFitText(`${pct}%`, pageWidth - margin - 36, y, 36, 9, textGray);
-      y -= 18;
+    if (pngImage) {
+      const w = 320;
+      const h = Math.round(w * (340 / 520));
+      ensureSpace(h + 16);
+      page.drawImage(pngImage, { x: (pageWidth - w) / 2, y: y - h, width: w, height: h });
+      y -= h + 24;
     }
 
     ensureSpace(70);
@@ -711,15 +675,21 @@ serve(async (req: Request) => {
       const donutPng = reportType === "detailed" && includeCharts
         ? await fetchDonutPng(data)
         : null;
-      const donutSrc = donutPng
-        ? `data:image/png;base64,${bytesToBase64(donutPng)}`
-        : null;
 
       const html = reportType === "simple"
         ? buildSimpleReportHtml(userName, data, monthStart, unsubscribeUrl)
-        : buildDetailedReportHtml(userName, data, monthStart, includeCategories, includeCharts, donutSrc, unsubscribeUrl);
+        : buildDetailedReportHtml(userName, data, monthStart, includeCategories, includeCharts, !!donutPng, unsubscribeUrl);
 
       const attachments: any[] = [];
+      if (donutPng) {
+        attachments.push({
+          filename: "donut.png",
+          content: donutPng,
+          cid: DONUT_CID,
+          contentType: "image/png",
+          contentDisposition: "inline",
+        });
+      }
       try {
         const pdfBytes = await buildReportPdf({
           userName,
