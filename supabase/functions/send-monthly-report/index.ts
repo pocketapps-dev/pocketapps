@@ -309,6 +309,7 @@ function buildCategoryBarsHtml(data: any): string {
 function buildDonutChartSpec(data: any): { chart: any; width: number; height: number } | null {
   if (!data.byCategory || data.byCategory.length === 0) return null;
   const entries = data.byCategory as [string, any][];
+  const total = entries.reduce((s: number, [, c]: [string, any]) => s + c.amount, 0) || 1;
   const chart = {
     type: "doughnut",
     data: {
@@ -332,6 +333,13 @@ function buildDonutChartSpec(data: any): { chart: any; width: number; height: nu
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
+        datalabels: {
+          display: `function(ctx) { return ctx.dataset.data[ctx.dataIndex] / ${total} >= 0.06; }`,
+          formatter: `function(value) { return Math.round(value / ${total} * 100) + '%'; }`,
+          color: "#ffffff",
+          font: { family: "Arial", size: 13, weight: "bold" },
+          textAlign: "center",
+        },
       },
     },
   };
@@ -368,11 +376,12 @@ async function uploadDonutPng(png: Uint8Array, userId: string, monthStart: Date)
   );
   try {
     await admin.storage.createBucket(CHARTS_BUCKET, { public: true }).catch(() => {});
-    const path = `donuts/${userId}-${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}.png`;
+    const stamp = Date.now();
+    const path = `donuts/${userId}-${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}-${stamp}.png`;
     const { error } = await admin.storage.from(CHARTS_BUCKET).upload(path, png, {
       contentType: "image/png",
-      upsert: true,
-      cacheControl: "86400",
+      upsert: false,
+      cacheControl: "3600",
     });
     if (error) {
       console.error("[Charts] Upload Storage falhou:", error.message);
@@ -386,10 +395,8 @@ async function uploadDonutPng(png: Uint8Array, userId: string, monthStart: Date)
 }
 
 function buildDonutLegendHtml(data: any): string {
-  const total = data.byCategory.reduce((s: number, [, c]: [string, any]) => s + c.amount, 0) || 1;
   const rows = data.byCategory
     .map(([name, c]: [string, any]) => {
-      const pct = Math.round((c.amount / total) * 100);
       return `<tr>
         <td style="padding:0;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc; border-radius:10px;">
@@ -398,7 +405,7 @@ function buildDonutLegendHtml(data: any): string {
                 <span style="display:inline-block; width:10px; height:10px; border-radius:3px; background-color:${c.color}; margin-right:8px;"></span>
                 <span style="color:#334155; font-size:13px;">${escapeHtml(name)}</span>
               </td>
-              <td align="right" style="padding:9px 12px; color:#0f172a; font-size:13px; font-weight:bold; white-space:nowrap;">${money(c.amount)}<span style="color:#94a3b8; font-weight:normal;">&nbsp;&nbsp;${pct}%</span></td>
+              <td align="right" style="padding:9px 12px; color:#0f172a; font-size:13px; font-weight:bold; white-space:nowrap;">${money(c.amount)}</td>
             </tr>
           </table>
         </td>
@@ -566,18 +573,16 @@ async function buildReportPdf(opts: {
       const h = 190;
       ensureSpace(h + 16);
       page.drawImage(pngImage, { x: margin, y: y - h, width: w, height: h });
-      const catTotal = data.byCategory.reduce((s: number, [, c]: [string, any]) => s + c.amount, 0) || 1;
       const cardX = margin + w + 18;
       const cardW = pageWidth - margin - cardX;
       let ly = y - 6;
       for (const [name, c] of data.byCategory as [string, any][]) {
         ensureSpace(34);
         if (ly - 30 < margin) break;
-        const pct = Math.round((c.amount / catTotal) * 100);
         page.drawRectangle({ x: cardX, y: ly - 28, width: cardW, height: 26, color: lightBg });
         page.drawRectangle({ x: cardX + 10, y: ly - 21, width: 9, height: 9, color: hexToRgb(c.color) });
         drawFitText(pdfSafe(name), cardX + 26, ly - 19, cardW - 130, 10, textDark);
-        const vt = `${pdfSafe(money(c.amount))} · ${pct}%`;
+        const vt = pdfSafe(money(c.amount));
         const vw = bold.widthOfTextAtSize(vt, 10);
         page.drawText(vt, { x: cardX + cardW - 10 - vw, y: ly - 19, size: 10, font: bold, color: textGray });
         ly -= 32;
