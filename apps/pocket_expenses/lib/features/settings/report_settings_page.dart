@@ -39,7 +39,7 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
     'Setembro', 'Outubro', 'Novembro', 'Dezembro',
   ];
 
-  bool _enabled = false;
+  bool _enabled = true;
   int _day = 1;
   int _hourUtc = 9;
   String _reportType = 'detailed';
@@ -66,6 +66,8 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
   bool get _dirty => _saved != null && _saved != _snapshot;
 
   bool get _isPremium => ref.watch(subscriptionProvider).value?.isActive == true;
+
+  bool get _premiumNow => ref.read(subscriptionProvider).value?.isActive == true;
 
   void _openPlans() {
     Navigator.push(
@@ -119,21 +121,26 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
 
   void _applyPrefs(Map<String, dynamic> prefs) {
     setState(() {
-      _enabled = prefs['email_reports_enabled'] as bool? ?? false;
+      _enabled = prefs['email_reports_enabled'] as bool? ?? true;
       _day = prefs['report_day'] as int? ?? 1;
       _hourUtc = prefs['report_hour'] as int? ?? _utcFromLocal(9);
-      _reportType = prefs['report_type'] as String? ?? 'detailed';
+      _reportType =
+          _premiumNow ? prefs['report_type'] as String? ?? 'detailed' : 'simple';
       _saved = _snapshot;
     });
   }
 
   Future<void> _save() async {
     setState(() => _isSaving = true);
+    final type = _premiumNow ? _reportType : 'simple';
+    if (type != _reportType) {
+      setState(() => _reportType = type);
+    }
     await ref.read(reportActionsProvider).save(
           emailReportsEnabled: _enabled,
           reportDay: _day,
           reportHour: _hourUtc,
-          reportType: _reportType,
+          reportType: type,
         );
     if (mounted) {
       setState(() {
@@ -325,7 +332,10 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
               subtitle:
                   const Text('Recebe um resumo das tuas despesas mensalmente'),
               value: _enabled,
-              onChanged: (value) => setState(() => _enabled = value),
+              onChanged: (value) => setState(() {
+                _enabled = value;
+                if (value && _premiumNow) _reportType = 'detailed';
+              }),
             ),
             const SizedBox(height: 16),
             Card(
@@ -389,7 +399,7 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: !_dirty || _isSaving ? null : _save,
+                onPressed: _isSaving ? null : _save,
                 child: _isSaving
                     ? const SizedBox(
                         height: 20,

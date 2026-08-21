@@ -12,7 +12,7 @@ final reportPreferencesProvider = FutureProvider<Map<String, dynamic>>((ref) asy
   final prefs = await service.getPreferences();
   return prefs ??
       {
-        'email_reports_enabled': false,
+        'email_reports_enabled': true,
         'report_day': 1,
         'report_hour': 9,
         'report_type': 'detailed',
