@@ -311,42 +311,53 @@ function buildDonutSvg(data: any): string | null {
   const entries = data.byCategory as [string, any][];
   const total = entries.reduce((s: number, [, c]: [string, any]) => s + c.amount, 0) || 1;
 
-  const cx = 170;
-  const cy = 170;
-  const r = 146;
-  const sw = 46;
+  const S = 440;
+  const cx = S / 2;
+  const cy = S / 2;
+  const r = 138;
+  const sw = 42;
   const gap = 4;
   const circ = 2 * Math.PI * r;
 
   const rings: string[] = [];
-  const labels: string[] = [];
+  const marks: string[] = [];
   let acc = 0;
+  let outIdx = 0;
   for (const [, c] of entries) {
     const frac = c.amount / total;
+
     if (frac >= 0.999) {
       rings.push(`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c.color}" stroke-width="${sw}"/>`);
-      acc += circ;
-      continue;
-    }
-    const len = Math.max(frac * circ - gap, 0.5);
-    const rot = (acc / circ) * 360 - 90;
-    rings.push(
-      `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c.color}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(2)} ${(circ - len).toFixed(2)}" transform="rotate(${rot.toFixed(3)} ${cx} ${cy})"/>`,
-    );
-    const pct = Math.round(frac * 100);
-    if (pct >= 6) {
-      const midDeg = ((acc + (frac * circ) / 2) / circ) * 360 - 90;
-      const rad = (midDeg * Math.PI) / 180;
-      const tx = cx + r * Math.cos(rad);
-      const ty = cy + r * Math.sin(rad);
-      labels.push(
-        `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" dy="0.35em" font-family="NanumGothic" font-size="22" font-weight="bold" fill="#ffffff" text-anchor="middle">${pct}%</text>`,
+    } else {
+      const len = Math.max(frac * circ - gap, 0.5);
+      const rot = (acc / circ) * 360 - 90;
+      rings.push(
+        `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c.color}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(2)} ${(circ - len).toFixed(2)}" transform="rotate(${rot.toFixed(3)} ${cx} ${cy})"/>`,
       );
     }
+
+    const pct = Math.round(frac * 100);
+    const midDeg = ((acc + (frac * circ) / 2) / circ) * 360 - 90;
+    const rad = (midDeg * Math.PI) / 180;
+    const dirX = Math.cos(rad);
+    const dirY = Math.sin(rad);
+    const p1r = r + sw / 2 + 3;
+    const p2r = p1r + 16 + (outIdx++ % 2) * 12;
+    const x1 = cx + p1r * dirX;
+    const y1 = cy + p1r * dirY;
+    const x2 = cx + p2r * dirX;
+    const y2 = cy + p2r * dirY;
+    const anchor = dirX >= 0 ? "start" : "end";
+    const tx = x2 + (dirX >= 0 ? 4 : -4);
+    marks.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#94a3b8" stroke-width="1.5"/>`);
+    marks.push(
+      `<text x="${tx.toFixed(1)}" y="${y2.toFixed(1)}" dy="0.35em" font-family="NanumGothic" font-size="15" font-weight="bold" fill="#334155" text-anchor="${anchor}">${pct}%</text>`,
+    );
+
     acc += frac * circ;
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="340" height="340" viewBox="0 0 340 340">${rings.join("")}${labels.join("")}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}" viewBox="0 0 ${S} ${S}">${rings.join("")}${marks.join("")}</svg>`;
 }
 
 const CHARTS_BUCKET = "report-charts";
@@ -362,7 +373,7 @@ async function fetchDonutPng(data: any): Promise<Uint8Array | null> {
         apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
       },
-      body: JSON.stringify({ svg, width: 680 }),
+      body: JSON.stringify({ svg, width: 880 }),
     });
     if (!res.ok) {
       console.error(`[Charts] svg-to-png erro: ${res.status} ${await res.text()}`);
