@@ -42,7 +42,7 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
   bool _enabled = true;
   int _day = 1;
   int _hourUtc = 9;
-  String _reportType = 'detailed';
+  String _reportType = 'simple';
   bool _isSaving = false;
   bool _isSendingTest = false;
   bool _initialized = false;
@@ -68,6 +68,8 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
   bool get _isPremium => ref.watch(subscriptionProvider).value?.isActive == true;
 
   bool get _premiumNow => ref.read(subscriptionProvider).value?.isActive == true;
+
+  Map<String, dynamic>? _lastPrefs;
 
   void _openPlans() {
     Navigator.push(
@@ -105,10 +107,15 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
     if (_initialized) return;
     _initialized = true;
     ref.listen(reportPreferencesProvider, (prev, next) {
-      if (!mounted || _dirty) return;
       final prefs = next.value;
       if (prefs == null) return;
+      _lastPrefs = prefs;
+      if (!mounted || _dirty) return;
       _applyPrefs(prefs);
+    });
+    ref.listen(subscriptionProvider, (prev, next) {
+      if (!mounted || _dirty || _lastPrefs == null) return;
+      _applyPrefs(_lastPrefs!);
     });
   }
 
@@ -116,7 +123,10 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
   void initState() {
     super.initState();
     final cached = ref.read(reportPreferencesProvider).value;
-    if (cached != null) _applyPrefs(cached);
+    if (cached != null) {
+      _lastPrefs = cached;
+      _applyPrefs(cached);
+    }
   }
 
   void _applyPrefs(Map<String, dynamic> prefs) {
@@ -124,8 +134,7 @@ class _ReportSettingsPageState extends ConsumerState<ReportSettingsPage> {
       _enabled = prefs['email_reports_enabled'] as bool? ?? true;
       _day = prefs['report_day'] as int? ?? 1;
       _hourUtc = prefs['report_hour'] as int? ?? _utcFromLocal(9);
-      _reportType =
-          _premiumNow ? prefs['report_type'] as String? ?? 'detailed' : 'simple';
+      _reportType = prefs['report_type'] as String? ?? 'simple';
       _saved = _snapshot;
     });
   }
