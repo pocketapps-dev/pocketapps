@@ -119,6 +119,7 @@ class PlansPage extends ConsumerWidget {
               'Backup automático na cloud',
               'Exportar dados avançado',
               'Suporte prioritário',
+              '3 temas adicionais',
             ],
             active: activeKey == 'premium',
             recommended: true,
