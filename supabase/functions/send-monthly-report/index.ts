@@ -309,42 +309,29 @@ function buildCategoryBarsHtml(data: any): string {
 function buildDonutChartSpec(data: any): { chart: any; width: number; height: number } | null {
   if (!data.byCategory || data.byCategory.length === 0) return null;
   const entries = data.byCategory as [string, any][];
-  const total = entries.reduce((s: number, [, c]: [string, any]) => s + c.amount, 0);
   const chart = {
     type: "doughnut",
     data: {
       labels: entries.map(([name]: [string, any]) => name),
       datasets: [
         {
-          data: [total],
-          backgroundColor: ["#eef2f7"],
-          borderWidth: 0,
-        },
-        {
           data: entries.map(([, c]: [string, any]) => c.amount),
           backgroundColor: entries.map(([, c]: [string, any]) => c.color),
           borderColor: "#ffffff",
-          borderWidth: 2,
-          borderRadius: 12,
-          spacing: 2,
+          borderWidth: 0,
+          borderRadius: 14,
+          spacing: 3,
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      cutout: "73%",
-      layout: { padding: 8 },
+      cutout: "72%",
+      layout: { padding: 10 },
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
-        datalabels: {
-          display: (ctx: any) => ctx.datasetIndex === 1 && ctx.dataset.data[ctx.dataIndex] / total >= 0.08,
-          formatter: (value: number) => `${Math.round((value / total) * 100)}%`,
-          color: "#ffffff",
-          font: { family: "Inter, Segoe UI, Arial, sans-serif", size: 13, weight: "bold" },
-          textAlign: "center",
-        },
       },
     },
   };
@@ -360,7 +347,7 @@ async function fetchDonutPng(data: any): Promise<Uint8Array | null> {
     const res = await fetch("https://quickchart.io/chart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chart: spec.chart, width: spec.width, height: spec.height, format: "png", devicePixelRatio: 2 }),
+      body: JSON.stringify({ chart: spec.chart, version: "4.4.1", width: spec.width, height: spec.height, format: "png", devicePixelRatio: 2 }),
     });
     if (!res.ok) {
       console.error(`[Charts] QuickChart erro: ${res.status} ${await res.text()}`);
