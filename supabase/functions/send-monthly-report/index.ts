@@ -455,10 +455,10 @@ function buildChartsHtml(data: any, donutUrl: string | null): string {
     ${buildSplitBarHtml(data)}`;
 }
 
-function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, includeCategories: boolean, includeCharts: boolean, donutUrl: string | null, unsubscribeUrl: string): string {
+function buildDetailedReportHtml(userName: string, data: any, monthStart: Date, donutUrl: string | null, unsubscribeUrl: string): string {
   const label = monthLabel(monthStart);
 
-  const chartsHtml = includeCharts ? buildChartsHtml(data, donutUrl) : "";
+  const chartsHtml = buildChartsHtml(data, donutUrl);
 
   const bodyHtml = `${statsRowsHtml(data)}<h3 style="color:#111827; font-size:16px; margin:48px 0 8px 0;">Despesas do mês</h3>${buildExpensesTableHtml(data.items)}${chartsHtml}`;
   return buildShellHtml(
@@ -491,11 +491,9 @@ async function buildReportPdf(opts: {
   data: any;
   monthStart: Date;
   reportType: string;
-  includeCategories: boolean;
-  includeCharts: boolean;
   donut?: { content: Uint8Array } | null;
 }): Promise<Uint8Array> {
-  const { userName, data, monthStart, reportType, includeCategories, includeCharts, donut } = opts;
+  const { userName, data, monthStart, reportType, donut } = opts;
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -580,7 +578,7 @@ async function buildReportPdf(opts: {
     }
   }
 
-  if (includeCharts && data.byCategory.length > 0) {
+  if (data.byCategory.length > 0) {
     sectionTitle("Gráficos");
 
     const pngImage = donut?.content ? await doc.embedPng(donut.content) : null;
@@ -692,7 +690,7 @@ serve(async (req: Request) => {
       const hour = now.getHours();
       const { data: prefs } = await supabase
         .from("report_preferences")
-        .select("user_id, report_day, report_hour, include_categories, include_charts, app_name, report_type, unsubscribe_token")
+        .select("user_id, report_day, report_hour, app_name, report_type, unsubscribe_token")
         .eq("email_reports_enabled", true)
         .eq("report_day", day)
         .eq("report_hour", hour);
@@ -724,15 +722,13 @@ serve(async (req: Request) => {
       let prefsRow: any = {};
       const { data: prefsData } = await supabase
         .from("report_preferences")
-        .select("include_categories, include_charts, app_name, report_type, unsubscribe_token")
+        .select("app_name, report_type, unsubscribe_token")
         .eq("user_id", t.user_id)
         .maybeSingle();
       prefsRow = prefsData || {};
 
       const appName = prefsRow.app_name || "expenses";
       const data = await fetchReportData(supabase, t.user_id, appName, monthStart.toISOString(), monthEnd.toISOString());
-      const includeCategories = prefsRow.include_categories !== false;
-      const includeCharts = prefsRow.include_charts !== false;
       const reportType = body.report_type || prefsRow.report_type || "detailed";
       const token = prefsRow.unsubscribe_token;
       const baseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -744,7 +740,7 @@ serve(async (req: Request) => {
       const subject = `O teu relatório de ${monthLabel(monthStart)} 📊`;
 
       let donutUrl: string | null = null;
-      const donutPng = reportType === "detailed" && includeCharts
+      const donutPng = reportType === "detailed"
         ? await fetchDonutPng(data)
         : null;
       if (donutPng) {
@@ -753,7 +749,7 @@ serve(async (req: Request) => {
 
       const html = reportType === "simple"
         ? buildSimpleReportHtml(userName, data, monthStart, unsubscribeUrl)
-        : buildDetailedReportHtml(userName, data, monthStart, includeCategories, includeCharts, donutUrl, unsubscribeUrl);
+        : buildDetailedReportHtml(userName, data, monthStart, donutUrl, unsubscribeUrl);
 
       const attachments: any[] = [];
       try {
@@ -762,8 +758,6 @@ serve(async (req: Request) => {
           data,
           monthStart,
           reportType,
-          includeCategories,
-          includeCharts,
           donut: donutPng ? { content: donutPng } : null,
         });
         attachments.push({

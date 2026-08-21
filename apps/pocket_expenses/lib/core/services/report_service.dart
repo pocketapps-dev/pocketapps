@@ -21,8 +21,6 @@ class ReportService {
     required bool emailReportsEnabled,
     int? reportDay,
     int? reportHour,
-    bool includeCategories = true,
-    bool includeCharts = true,
     String reportType = 'detailed',
   }) async {
     await _client.from('report_preferences').upsert(
@@ -32,8 +30,6 @@ class ReportService {
         'email_reports_enabled': emailReportsEnabled,
         'report_day': ?reportDay,
         'report_hour': ?reportHour,
-        'include_categories': includeCategories,
-        'include_charts': includeCharts,
         'report_type': reportType,
       },
       onConflict: 'user_id,app_name',
