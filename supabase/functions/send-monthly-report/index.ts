@@ -308,31 +308,47 @@ function buildCategoryBarsHtml(data: any): string {
 
 function buildDonutChartSpec(data: any): { chart: any; width: number; height: number } | null {
   if (!data.byCategory || data.byCategory.length === 0) return null;
+  const entries = data.byCategory as [string, any][];
+  const total = entries.reduce((s: number, [, c]: [string, any]) => s + c.amount, 0);
   const chart = {
     type: "doughnut",
     data: {
-      labels: data.byCategory.map(([name]: [string, any]) => name),
+      labels: entries.map(([name]: [string, any]) => name),
       datasets: [
         {
-          data: data.byCategory.map(([, { amount }]: [string, { amount: number }]) => amount),
-          backgroundColor: data.byCategory.map(([, { color }]: [string, { color: string }]) => color),
+          data: [total],
+          backgroundColor: ["#eef2f7"],
+          borderWidth: 0,
+        },
+        {
+          data: entries.map(([, c]: [string, any]) => c.amount),
+          backgroundColor: entries.map(([, c]: [string, any]) => c.color),
           borderColor: "#ffffff",
-          borderWidth: 4,
-          borderRadius: 10,
+          borderWidth: 2,
+          borderRadius: 12,
+          spacing: 2,
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      cutout: "70%",
-      layout: { padding: 6 },
+      cutout: "73%",
+      layout: { padding: 8 },
       plugins: {
         legend: { display: false },
+        tooltip: { enabled: false },
+        datalabels: {
+          display: (ctx: any) => ctx.datasetIndex === 1 && ctx.dataset.data[ctx.dataIndex] / total >= 0.08,
+          formatter: (value: number) => `${Math.round((value / total) * 100)}%`,
+          color: "#ffffff",
+          font: { family: "Inter, Segoe UI, Arial, sans-serif", size: 13, weight: "bold" },
+          textAlign: "center",
+        },
       },
     },
   };
-  return { chart, width: 320, height: 320 };
+  return { chart, width: 340, height: 340 };
 }
 
 const CHARTS_BUCKET = "report-charts";
@@ -388,15 +404,21 @@ function buildDonutLegendHtml(data: any): string {
     .map(([name, c]: [string, any]) => {
       const pct = Math.round((c.amount / total) * 100);
       return `<tr>
-        <td style="padding:5px 0; vertical-align:middle; white-space:nowrap;">
-          <span style="display:inline-block; width:10px; height:10px; border-radius:3px; background-color:${c.color}; margin-right:8px;"></span>
-          <span style="color:#374151; font-size:13px;">${escapeHtml(name)}</span>
+        <td style="padding:0;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc; border-radius:10px;">
+            <tr>
+              <td style="padding:9px 12px; vertical-align:middle; white-space:nowrap;">
+                <span style="display:inline-block; width:10px; height:10px; border-radius:3px; background-color:${c.color}; margin-right:8px;"></span>
+                <span style="color:#334155; font-size:13px;">${escapeHtml(name)}</span>
+              </td>
+              <td align="right" style="padding:9px 12px; color:#0f172a; font-size:13px; font-weight:bold; white-space:nowrap;">${money(c.amount)}<span style="color:#94a3b8; font-weight:normal;">&nbsp;&nbsp;${pct}%</span></td>
+            </tr>
+          </table>
         </td>
-        <td align="right" style="padding:5px 0 5px 12px; color:#111827; font-size:13px; font-weight:bold; white-space:nowrap;">${money(c.amount)}<span style="color:#9ca3af; font-weight:normal;">&nbsp;&nbsp;${pct}%</span></td>
       </tr>`;
     })
     .join("");
-  return `<table cellpadding="0" cellspacing="0" border="0" width="100%">${rows}</table>`;
+  return `<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate; border-spacing:0 5px;">${rows}</table>`;
 }
 
 function buildChartsHtml(data: any, donutUrl: string | null): string {
@@ -558,16 +580,22 @@ async function buildReportPdf(opts: {
       ensureSpace(h + 16);
       page.drawImage(pngImage, { x: margin, y: y - h, width: w, height: h });
       const catTotal = data.byCategory.reduce((s: number, [, c]: [string, any]) => s + c.amount, 0) || 1;
-      let ly = y - 12;
+      const cardX = margin + w + 18;
+      const cardW = pageWidth - margin - cardX;
+      let ly = y - 6;
       for (const [name, c] of data.byCategory as [string, any][]) {
-        if (ly - 10 < margin) break;
+        ensureSpace(34);
+        if (ly - 30 < margin) break;
         const pct = Math.round((c.amount / catTotal) * 100);
-        page.drawRectangle({ x: margin + w + 18, y: ly - 3, width: 9, height: 9, color: hexToRgb(c.color) });
-        drawFitText(pdfSafe(name), margin + w + 32, ly, 90, 10, textDark);
-        drawFitText(`${pdfSafe(money(c.amount))} (${pct}%)`, margin + w + 128, ly, pageWidth - margin * 2 - w - 128, 10, textGray, bold);
-        ly -= 20;
+        page.drawRectangle({ x: cardX, y: ly - 28, width: cardW, height: 26, color: lightBg });
+        page.drawRectangle({ x: cardX + 10, y: ly - 21, width: 9, height: 9, color: hexToRgb(c.color) });
+        drawFitText(pdfSafe(name), cardX + 26, ly - 19, cardW - 130, 10, textDark);
+        const vt = `${pdfSafe(money(c.amount))} · ${pct}%`;
+        const vw = bold.widthOfTextAtSize(vt, 10);
+        page.drawText(vt, { x: cardX + cardW - 10 - vw, y: ly - 19, size: 10, font: bold, color: textGray });
+        ly -= 32;
       }
-      y -= h + 24;
+      y = Math.min(y - h, ly) - 14;
     }
 
     ensureSpace(70);
