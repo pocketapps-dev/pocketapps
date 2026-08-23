@@ -10,6 +10,7 @@ import 'config/currency_provider.dart';
 import 'config/theme.dart';
 import 'config/theme_provider.dart';
 import 'config/router.dart';
+import 'core/providers/dev_mode_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,10 @@ void main() async {
   final themeMode = AppTheme.getBrightness(themeName) == Brightness.dark
       ? ThemeMode.dark
       : ThemeMode.light;
+  final devMode = prefs.getBool(devModePrefKey) ?? false;
+  final subscriptionOverride = subscriptionOverrideFromName(
+    prefs.getString(subscriptionOverridePrefKey),
+  );
 
   runApp(
     ProviderScope(
@@ -38,6 +43,12 @@ void main() async {
         ),
         currencyProvider.overrideWith(
           () => CurrencyNotifier(initial: currency),
+        ),
+        devModeProvider.overrideWith(
+          () => DevModeNotifier(initial: devMode),
+        ),
+        subscriptionOverrideProvider.overrideWith(
+          () => SubscriptionOverrideNotifier(initial: subscriptionOverride),
         ),
       ],
       child: const PocketExpensesApp(),

@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/providers/dev_mode_provider.dart';
 import 'legal_page.dart';
 
-class AboutPage extends StatefulWidget {
+class AboutPage extends ConsumerStatefulWidget {
   const AboutPage({super.key});
 
   @override
-  State<AboutPage> createState() => _AboutPageState();
+  ConsumerState<AboutPage> createState() => _AboutPageState();
 }
 
-class _AboutPageState extends State<AboutPage> {
+class _AboutPageState extends ConsumerState<AboutPage> {
   String _version = '';
   String _buildNumber = '';
 
@@ -28,6 +30,72 @@ class _AboutPageState extends State<AboutPage> {
       _version = info.version;
       _buildNumber = info.buildNumber;
     });
+  }
+
+  Future<void> _toggleDevMode() async {
+    final devMode = ref.read(devModeProvider);
+    if (!devMode) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Modo de teste'),
+          content: const Text(
+            'Ativar o modo de teste? Fica disponivel uma opcao nas Definicoes '
+            'para alternar entre Free e Premium (apenas neste dispositivo).',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Ativar'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      await ref.read(devModeProvider.notifier).setEnabled(true);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Modo de teste ativado. Vai a Definicoes > TESTE para alternar.',
+          ),
+        ),
+      );
+    } else {
+      final off = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Modo de teste'),
+          content: const Text(
+            'O modo de teste esta ativo. Desativar? A subscricao volta ao '
+            'estado real.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Desativar'),
+            ),
+          ],
+        ),
+      );
+      if (off != true) return;
+      await ref
+          .read(subscriptionOverrideProvider.notifier)
+          .setOverride(SubscriptionOverride.real);
+      await ref.read(devModeProvider.notifier).setEnabled(false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Modo de teste desativado.')),
+      );
+    }
   }
 
   Future<void> _openUrl(BuildContext context, String url) async {
@@ -67,10 +135,40 @@ class _AboutPageState extends State<AboutPage> {
             style: theme.textTheme.headlineSmall,
           ),
           const SizedBox(height: 4),
-          Text(
-            'Versão $_version ($_buildNumber)',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
+          GestureDetector(
+            onLongPress: _toggleDevMode,
+            child: Column(
+              children: [
+                Text(
+                  'Versão $_version ($_buildNumber)',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey,
+                  ),
+                ),
+                if (ref.watch(devModeProvider)) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'MODO DE TESTE ATIVO',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
           const SizedBox(height: 32),
           Card(

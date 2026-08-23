@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pocketapps_auth/pocketapps_auth.dart';
 
+import '../../core/providers/dev_mode_provider.dart';
 import '../../core/providers/profile_provider.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../categories/categories_page.dart';
@@ -275,6 +276,74 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
+
+          // Teste (so visivel com modo de teste ativo)
+          if (ref.watch(devModeProvider)) ...[
+            Text(
+              'TESTE',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.amber.shade800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.science_outlined,
+                            size: 22, color: Colors.amber.shade800),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Estado da subscrição'),
+                              SizedBox(height: 2),
+                              Text(
+                                'Alterna entre Free e Premium sem tocar na base '
+                                'de dados (só neste dispositivo)',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SegmentedButton<SubscriptionOverride>(
+                      segments: const [
+                        ButtonSegment(
+                          value: SubscriptionOverride.real,
+                          label: Text('Real'),
+                        ),
+                        ButtonSegment(
+                          value: SubscriptionOverride.free,
+                          label: Text('Free'),
+                        ),
+                        ButtonSegment(
+                          value: SubscriptionOverride.premium,
+                          label: Text('Premium'),
+                        ),
+                      ],
+                      selected: {ref.watch(subscriptionOverrideProvider)},
+                      onSelectionChanged: (selection) {
+                        ref
+                            .read(subscriptionOverrideProvider.notifier)
+                            .setOverride(selection.first);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // Sobre
           Text(
