@@ -58,13 +58,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isLoggedIn && location == '/auth') return '/';
 
       if (isLoggedIn && !isPublicRoute) {
+        var onboardingCompleted = true;
         try {
-          final flags = await ref.read(profileFlagsProvider.future);
-          if (!flags.onboardingCompleted) {
-            return location == '/onboarding' ? null : '/onboarding';
-          }
-          if (location == '/onboarding') return '/';
+          final client = ref.read(supabaseClientProvider);
+          final uid = client.auth.currentUser!.id;
+          final row = await client
+              .from('profiles')
+              .select('onboarding_completed')
+              .eq('id', uid)
+              .maybeSingle()
+              .timeout(const Duration(seconds: 4));
+          onboardingCompleted =
+              row?['onboarding_completed'] as bool? ?? false;
         } catch (_) {}
+        if (!onboardingCompleted) {
+          return location == '/onboarding' ? null : '/onboarding';
+        }
+        if (location == '/onboarding') return '/';
       }
 
       return null;
