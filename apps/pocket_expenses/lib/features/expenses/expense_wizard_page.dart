@@ -221,8 +221,15 @@ class _ExpenseWizardPageState extends ConsumerState<ExpenseWizardPage> {
                   Text('O Wizard passo a passo e uma funcionalidade Premium.'),
             ),
           );
-          Navigator.of(context).push(
+          await Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const PlansPage()),
+          );
+          // Ao regressar dos planos nao volta para o wizard com os dados da
+          // despesa ja criada: vai direto para a app.
+          if (!mounted) return;
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const HomePage()),
+            (_) => false,
           );
           return;
         }
