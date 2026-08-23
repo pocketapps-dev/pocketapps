@@ -6,6 +6,7 @@ import 'package:pocketapps_auth/pocketapps_auth.dart';
 import '../../core/providers/profile_provider.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../categories/categories_page.dart';
+import '../onboarding/onboarding_page.dart';
 import '../profile/profile_page.dart';
 import 'account_page.dart';
 import 'preferences_page.dart';
@@ -214,6 +215,53 @@ class SettingsPage extends ConsumerWidget {
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const AccountPage()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Ajuda
+          Text(
+            'AJUDA',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.school_outlined),
+                  title: const Text('Rever o tutorial'),
+                  subtitle: const Text(
+                    'Guia da app em modo demonstração (nada é alterado)',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const OnboardingPage(demoMode: true),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.replay_outlined),
+                  title: const Text('Simular 1.ª utilização'),
+                  subtitle: const Text(
+                    'Teste: corre o tutorial completo como no primeiro arranque',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const OnboardingPage()),
                     );
                   },
                 ),

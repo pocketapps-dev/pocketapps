@@ -8,7 +8,10 @@ import '../expenses/expense_wizard_page.dart';
 import '../home/home_page.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
-  const OnboardingPage({super.key});
+  /// [demoMode] corre o tutorial sem alterar dados nem abrir o wizard.
+  final bool demoMode;
+
+  const OnboardingPage({super.key, this.demoMode = false});
 
   @override
   ConsumerState<OnboardingPage> createState() => _OnboardingPageState();
@@ -58,6 +61,21 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   Future<void> _finish({bool useWizard = false}) async {
     if (_finishing) return;
     _finishing = true;
+
+    // Modo demonstração: sai do tutorial sem tocar em dados, moeda, tema,
+    // flags ou wizard.
+    if (widget.demoMode) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Fim da demonstração — nenhuma alteração foi guardada.',
+          ),
+        ),
+      );
+      Navigator.of(context).pop();
+      return;
+    }
 
     final username = _usernameCtrl.text.trim();
     if (username.isEmpty) {
@@ -116,10 +134,38 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 padding: const EdgeInsets.only(top: 8, right: 16),
                 child: TextButton(
                   onPressed: _finishing ? null : () => _finish(),
-                  child: const Text('Saltar'),
+                  child: Text(widget.demoMode ? 'Sair' : 'Saltar'),
                 ),
               ),
             ),
+            if (widget.demoMode)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.school_outlined,
+                        size: 18, color: Colors.amber.shade900),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Modo demonstração — nenhuma alteração será guardada.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Expanded(
               child: PageView(
                 controller: _pageCtrl,
@@ -132,6 +178,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   _SlidePreview(colorScheme: colorScheme),
                   _SetupPage(
                     usernameController: _usernameCtrl,
+                    readOnly: widget.demoMode,
                     currency: _currency,
                     onCurrencyChanged: (c) => setState(() => _currency = c),
                     themeMode: _themeMode,
@@ -285,6 +332,7 @@ class _SlideShell extends StatelessWidget {
 
 class _SetupPage extends StatelessWidget {
   final TextEditingController usernameController;
+  final bool readOnly;
   final String currency;
   final ValueChanged<String> onCurrencyChanged;
   final ThemeMode themeMode;
@@ -293,6 +341,7 @@ class _SetupPage extends StatelessWidget {
 
   const _SetupPage({
     required this.usernameController,
+    required this.readOnly,
     required this.currency,
     required this.onCurrencyChanged,
     required this.themeMode,
@@ -331,6 +380,7 @@ class _SetupPage extends StatelessWidget {
           const SizedBox(height: 10),
           TextField(
             controller: usernameController,
+            readOnly: readOnly,
             decoration: const InputDecoration(
               prefixIcon: Icon(Icons.badge_outlined),
               hintText: 'ex.: paulo_silva',
