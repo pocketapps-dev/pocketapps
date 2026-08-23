@@ -1,7 +1,7 @@
 # PocketApps — Estado Global do Projeto
 
 > Resumo completo do monorepo: o que existe, o que está em progresso e o que falta.
-> Atualizado em 2026-08-13.
+> Atualizado em 2026-08-23 — **PocketExpenses em fase de TESTES** (antes da integração Stripe).
 
 ## 1. Visão geral
 
@@ -25,7 +25,7 @@ packages/
   pocketapps_auth/        → Auth partilhada (Supabase + Google)
 supabase/
   schema.sql              → Fonte de verdade do schema (todas as apps)
-  migrations/             → 001_themes.sql, 002_report_type.sql, 003_founder_count.sql, 004_light_dark_themes.sql, 005_theme_brightness.sql, 006_remove_default_theme.sql, 007_themes_order_free_first.sql
+  migrations/             → 20260823125225_remote_schema.sql (snapshot remoto — histórico antigo consolidado, ver §4)
   functions/              → 6 Edge Functions (Deno)
 docs/
   auth.md                 → Autenticação (Supabase Auth + Google, setup no dashboard)
@@ -38,7 +38,6 @@ pocketapps.github.io/     → Repo separado do site (git-ignored no main)
 .github/workflows/        → build-expenses.yml, build-fuel.yml, build-shopping.yml
 scripts/
   cloudflare-email-routing.ps1
-TODO.md                   → Tarefas A/B/C concluídas
 ```
 
 ## 3. Estado das apps
@@ -53,8 +52,11 @@ TODO.md                   → Tarefas A/B/C concluídas
 - Auth Supabase (email/password + Google) com fluxo completo (callback, reset password, mudar email/password, apagar conta).
 - Gestão de despesas recorrentes/únicas, categorias, resumo mensal, calendário, temas.
 - **Loja de temas (2026-08-04)**: página `/settings/themes` alimentada pelo RPC `get_user_themes` — secções Grátis (Light, Dark) / **TEMAS PAGOS** (todos os não-gratuitos: Premium Midnight, Forest, Sunset + Ocean, Autumn, Galaxy 0,99€, compra no site `themes.html`) + ativação de código de tema. Desde 2026-08-10 tocar num tema premium abre um diálogo ("Ver planos" → `/settings/plans` ou "Obter no site" → `themes.html`); temas pagos abrem a loja diretamente. Desde 2026-08-09 cada tema define a luminosidade da app (light/dark) e o tema `default` foi removido (migration `006_remove_default_theme.sql`).
-- Relatórios mensais por email (`report_settings_page` + `report_provider`/`report_service`). Desde 2026-08-10 o **relatório de teste escolhe o mês** (diálogo com grelha de meses + ano) e o relatório `detailed` inclui a **lista completa "Despesas do mês"** (nome, categoria, tipo, valor).
-- Plataformas de destino: Android (APK gerado em CI). `version: 1.0.0+1`.
+- Relatórios mensais por email (`report_settings_page` + `report_provider`/`report_service`). Desde 2026-08-10 o **relatório de teste escolhe o mês** e o relatório `detailed` inclui a **lista completa "Despesas do mês"**. **Preferências simplificadas (2026-08-21)**: mensal ativo por defeito; detalhado é feature Premium ativada com switch; dia/hora combinados num só campo; o que se vê na página = o que está guardado.
+- **Onboarding (2026-08-22)**: fluxo inicial de 5 páginas para novos utilizadores, incluindo slide com exemplo da página principal e campo para alterar o nome de utilizador; utilizadores Free podem usar o **wizard passo a passo 1 vez** (flag `wizard_free_used`, verificada sempre com flags frescas + guarda dura no save). "Rever tutorial" nas definições abre em modo demo (sem alterar dados) e "Simular 1.ª utilização" repõe a flag do wizard.
+- **Gates Premium (2026-08-22/23)**: wizard bloqueado após 1.º uso free — ao tentar "Criar outra despesa" verifica premium ANTES de preencher (snackbar → Planos); ao voltar dos Planos vai direto à app (nunca volta ao wizard com dados antigos). Limite de **10 categorias** no plano Free. **Backup diário cloud (snapshots) exclusivo Premium com restauro num toque**.
+- **Modo de teste Free/Premium (2026-08-23)**: long-press na versão em Sobre → ativa modo de teste → secção TESTE nas Definições com seletor Real | Free | Premium. Override **local apenas** (SharedPreferences, sem escrever na BD), aplicado no `subscriptionProvider` — toda a app responde instantaneamente (wizard, banners, limites, backup, relatórios). Persiste entre aberturas; badge "MODO DE TESTE ATIVO" na página Sobre. **⚠️ Remover/esconder antes do lançamento público** (issue no GitHub).
+- Plataformas de destino: Android (APK gerado em CI). `version: 1.0.0+1`. APK publicado na release GitHub `pocketexpenses-latest` como `PocketExpenses.apk` + sync automático para pocketapps.pt (Ctrl+F5 para cache).
 
 ## 4. Backend Supabase
 
@@ -74,15 +76,7 @@ TODO.md                   → Tarefas A/B/C concluídas
 - Trigger genérico `update_updated_at` em profiles/expenses/subscriptions/user_settings/report_preferences.
 
 ### Migrations
-| Migration | Conteúdo | Estado |
-|---|---|---|
-| `001_themes.sql` | 3 tabelas (themes, user_themes, theme_purchases) + 3 RPCs + 7 temas seed + unique constraint | ✅ Aplicada e verificada no remoto (`20260803051308`) |
-| `002_report_type.sql` | `report_preferences.report_type` (`simple`/`detailed`) | ✅ Aplicada e verificada no remoto (`20260803043706`) |
-| `003_founder_count.sql` | RPC pública `get_founder_count()` | ✅ No schema (`supabase/schema.sql`) |
-| `004_light_dark_themes.sql` | Temas gratuitos `Light` e `Dark` (app `expenses`) | ✅ Aplicada no remoto |
-| `005_theme_brightness.sql` | Coluna `themes.brightness` + default/constraint + `get_user_themes` com `brightness` | ✅ Aplicada no remoto |
-| `006_remove_default_theme.sql` | Desativa o tema `default` (`is_active=false`) — fora do catálogo e da validação de códigos | ✅ Aplicada no remoto |
-| `007_themes_order_free_first.sql` | Renumera `sort_order` dos temas (gratuitos `light`/`default`/`dark` primeiro) + `get_user_themes` com ordenação free-first | ✅ Aplicada no remoto |
+> **Reconciliação (2026-08-23, commit `c55ca0d`)**: o histórico local de migrations (001–007) foi consolidado num único **snapshot do schema remoto de produção** — `migrations/20260823125225_remote_schema.sql`. O histórico antigo já não existe como ficheiros individuais; `schema.sql` continua a ser a fonte de verdade e está sincronizado com a produção (commit `bd410a0`). Novas migrations devem partir do snapshot atual.
 
 ### Edge Functions (6)
 `delete-account`, `report-unsubscribe`, `send-monthly-report` (relatório mensal, usa `report_type`), `send-welcome-email`, `stripe-webhook` (payment link webhook — **deployado (v1, 2026-08-11)**, usa env vars `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` + SMTP Brevo — **env vars ainda por definir no remoto**), `svg-to-png` (conversão SVG → PNG serverless, resvg-wasm — **deployado (v1, 2026-08-13)**).
@@ -127,45 +121,48 @@ Documento completo: [`docs/monetizacao-stripe.md`](monetizacao-stripe.md).
 - **Passos 4–8** 🟡 **parciais**: `stripe-webhook` já deployado (v1, 2026-08-11); falta definir env vars, criar 6 Payment Links, registar o webhook na Stripe, colocar links reais e substituir botões mock (dashboard da Stripe em baixo — erro do lado da Stripe).
 - **Botões mock**: `buy.stripe.com/TODO_*` → decisão de 2026-08: botões **"Comprar" desativados** com labels dinâmicos do `config.js` em `pricing.html` (ex.: "Comprar Premium · €14.99/ano"); `themes.html` mantém "Em breve" (`.btn-buy` em `style.css`).
 
-## 8. WIP neste commit (2026-08-08)
+- **Botões mock**: `buy.stripe.com/TODO_*` → decisão de 2026-08: botões **"Comprar" desativados** com labels dinâmicos do `config.js` em `pricing.html` (ex.: "Comprar Premium · €14.99/ano"); `themes.html` mantém "Em breve" (`.btn-buy` em `style.css`).
+- **Gates Premium já implementados na app (2026-08-22/23)**: wizard passo a passo só free 1.ª vez; limite de 10 categorias no Free; relatório detalhado Premium; backup diário cloud Premium. Ainda por implementar: anúncios (fase 1) e widgets home screen (fase 6). Detalhe das fases: [`monetizacao-stripe.md`](monetizacao-stripe.md).
+- **Decisão de fluxo (2026-08-23)**: integração Stripe (passos 4–8) fica **em pausa até concluída a fase de testes** da app.
 
-- **Novo modelo de planos na app** (PocketExpenses): página de planos (`plans_page.dart`) mostra Premium `€14.99/ano` e Founder **total das 3 apps** — `€37,50` (50% OFF) ou `€75`; `founderCountProvider` (`subscription_provider.dart`) lê a RPC `get_founder_count()` e ativa o desconto enquanto `founder_count < 5`; banner do dashboard `€14.99/ano`; termos atualizados em `about_page.dart`.
-- **Fluxo de planos app → site** (commit `7cb7bd8`): card de topo de Definições (`settings_page.dart`) e `_PlanCard` da Conta (`account_page.dart`) navegam para `/settings/plans`; botão "Comprar no website" em `plans_page.dart` abre `https://pocketapps.pt/pricing.html`. No site, `pricing.html` (repo `pocketapps.github.io`) mostra botões "Comprar" desativados com labels dinâmicos do `config.js` (ex.: "Comprar Premium · €14.99/ano", "Comprar Founder · €37.50").
-- Docs: `003_founder_count.sql` + RPC `get_founder_count` registados em `backend.md`/`project-status.md`; nota da app em `monetizacao-stripe.md`; fluxo app → site e labels do pricing em `site.md`/`monetizacao-stripe.md`.
-- **Brilho por tema (2026-08-09)**: cada tema define a luminosidade da app — coluna `themes.brightness` (`light`/`dark`) na migration `005_theme_brightness.sql` (backfill + default + constraint) e devolvida por `get_user_themes`; `ThemeInfo.brightness` usada em `themes_page.dart`; `theme_provider.setMode()` substitui o toggle manual de dark mode (removido de `preferences_page.dart`); `main.dart` deriva o `themeMode` do tema ativo (fallback `AppTheme.light`). Migrations `004_light_dark_themes.sql` (temas Light/Dark gratuitos), `005` e `006_remove_default_theme.sql` (desativação do tema `default`, fora do catálogo e da validação de códigos) aplicadas no remoto.
+## 8. Estado atual (2026-08-23) — fim da fase de desenvolvimento, início dos testes
+
+Última sessão de desenvolvimento fechou o ciclo onboarding → wizard → gating premium:
+
+| Commit | O que fez |
+|---|---|
+| `e206841` | Backup diário cloud (snapshots) Premium com restauro num toque |
+| `740885f` | Limite de 10 categorias no plano Free |
+| `8c329ad` `0faf08f` `47c0ebb` | Onboarding 5 páginas + slide com exemplo e nome de utilizador + fix redirect (ecrã preto) |
+| `2130435` `5b008e4` `b919149` | Wizard free bloqueia após 1.º uso (`wizard_free_used`, flags frescas + guarda no save); rever tutorial em modo demo; simular 1.ª utilização |
+| `f662305` `621ce20` | Gate premium ANTES de preencher nova despesa ("criar outra"); voltar dos Planos → app (nunca wizard com dados antigos) |
+| `413835f` | Modo de teste Free/Premium (long-press na versão em Sobre; override local no `subscriptionProvider`) |
+
 - `flutter analyze`: ✅ sem issues.
-
-### Fixes app → site (este commit)
-
-- **Bug app (botão não abria o link)**: `_openUrl(BuildContext, String)` em `plans_page.dart`, `about_page.dart` e `legal_page.dart` estava gateado por `canLaunchUrl()`, que devolve `false` para `https` em muitos emuladores/simuladores e falhava **silenciosamente** (sem reencaminhar nem avisar). Corrigido: `launchUrl(uri, mode: LaunchMode.externalApplication)` direto com try/catch + SnackBar "Não foi possível abrir o link. Tenta novamente.".
-- **Bug web (pricing sem botões "Comprar")**: `pricing.html` carregava `config.js` com `defer`, mas o script inline lê `window.POCKETAPPS_CONFIG` **sincronamente** → `CONFIG` era `undefined` → `TypeError` matava todo o script (sem botões comprar, sem countdown founder, sem redirect de auth). Corrigido: `defer` removido, `config.js` mantém-se na `<head>` antes do SDK Supabase.
-- `flutter analyze`/`dart analyze` excederam timeout nesta máquina (180s/300s) — análise estática não validada localmente; compilação confirmada pelo build (este commit).
-
-`devtools_options.yaml` (local) — não commitar. `supabase/migrations/` e `supabase/functions/stripe-webhook/` já aplicados no remoto (commit `a6c2740`).
+- CI verde: APK publicado na release `pocketexpenses-latest` (SHA256 do último build: `56F65159069D9FA20F60863F030784945B0387C5F93FC5AD7C9173BD1C730087`).
 
 ## 9. O que falta / próximo
 
+**Ordem acordada (2026-08-23): 1º testar a app → só depois integrar Stripe.**
+
 | # | Item | Estado |
 |---|---|---|
-| 1 | Migration `002_report_type.sql` aplicar no remoto | ✅ feito (verificada) |
-| 2 | Dashboard Supabase: email provider + confirm email + **custom SMTP** | ✅ feito (SMTP corrigido e verificado) |
-| 3 | Dashboard Supabase: redirect URLs + Site URL | ✅ feito — allowlist + Site URL `https://pocketapps.pt` (2026-08-03) |
-| 4–8 | Stripe: Payment Links + deploy webhook + links reais + botões | 🟡 parcial — webhook deployado (v1, 2026-08-11); falta Payment Links + registo webhook (Stripe em baixo) |
-| 9 | Botões mock → "Em breve" (decisão tomada) | ⏳ falta aplicar no site |
-| 10 | Commit do WIP (relatório tipo + temas no schema + reorg de docs) | ✅ feito (commits `a6c2740`, `9253aba`, este) |
-| 11 | Remover `index.ts` órfão da raiz | ✅ removido localmente (sem commit) |
-| 12 | Apps Fuel e Shopping: passar de stub para implementação | 🟡 futuro |
-| 13 | Fases de monetização no produto (anúncios, gates, widgets, wizard) | 🟡 ver `monetizacao-stripe.md` |
-| 14 | Site: magic link não enviava (SyntaxError do CDN) + allowlist `/themes` `/pricing` | ✅ corrigido (2026-08-03, commit `d6f9839`) |
-| 15 | Site: login/signup por email/password + Google na homepage | ✅ feito (2026-08-03, commit `8dfb41e`) |
-| 16 | App: loja de temas (`/settings/themes` via `get_user_themes`) | ✅ feito (2026-08-04, commit `7eeb809`) |
-| 17 | App: botão "Comprar no website" não reencaminhava (`canLaunchUrl` falhava silenciosamente) | ✅ corrigido (este commit — `launchUrl` direto + SnackBar) |
-| 18 | Site: `pricing.html` sem botões "Comprar" (`config.js` carregado com `defer`, script corria antes) | ✅ corrigido (este commit — `defer` removido) |
-| 19 | App: brilho por tema (light/dark) — tema ativo controla o `themeMode` | ✅ feito (2026-08-09) |
-| 20 | App: relatório de teste com escolha de mês + lista "Despesas do mês" no `detailed` + fix valores vazios (`s > now`) | ✅ feito (2026-08-10) |
+| 1 | **Fase de testes PocketExpenses** — checklist no issue GitHub correspondente | 🟡 PRÓXIMO — app considerada feature-complete para esta fase |
+| 2 | Stripe passos 4–8: env vars (`STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`), Payment Links, registo webhook, links reais, botões ativos | ⏳ EM PAUSA até concluírem os testes |
+| 3 | Remover/esconder modo de teste Free/Premium antes do lançamento público | ⏳ pendente (issue criada) |
+| 4 | Fases de monetização em falta: anúncios (1) e widgets home screen (6) | ⏳ futuro — ver `monetizacao-stripe.md` |
+| 5 | Apps Fuel e Shopping: passar de stub para implementação | ⏳ futuro |
+| 6 | Dashboard Supabase: email provider + SMTP + redirects + Site URL | ✅ feito |
+| 7 | Onboarding + wizard com gating free (1 uso) + rever tutorial/simular 1.ª utilização | ✅ feito (2026-08-22) |
+| 8 | Gates premium: wizard, 10 categorias, relatório detalhado, backup cloud | ✅ feito (2026-08-22/23) |
+| 9 | Modo de teste Free/Premium local (sem tocar na BD) | ✅ feito (2026-08-23, commit `413835f`) |
+| 10 | Migrations reconciliadas com produção (snapshot remoto único) | ✅ feito (2026-08-23, commit `c55ca0d`) |
+| 11 | Relatórios: preferências simplificadas, donut final (percentagens fora, linhas guia), PDF espelhado | ✅ feito (2026-08-21/22) |
 
 ## 10. Notas de manutenção
 
 - As páginas do site **não** são versionadas no repo principal (git-ignored); vivem no repo `pocketapps.github.io`.
-- Migrations versionadas em `supabase/migrations/` (001–007) e aplicadas no remoto. `supabase/functions/stripe-webhook/` commitado e deployado (v1, 2026-08-11) — falta definir env vars no remoto.
+- `supabase/migrations/` contém apenas o snapshot remoto consolidado (`20260823125225_remote_schema.sql`) — novas migrations partem dele.
+- `supabase/functions/stripe-webhook/` commitado e deployado (v1, 2026-08-11) — env vars ainda por definir no remoto.
 - Alterações locais: CRLF warnings no git (não bloqueantes, só normalização).
+- Issues de acompanhamento no GitHub (`pocketapps-dev/pocketapps`): fase de testes, integração Stripe, remoção do modo de teste.
