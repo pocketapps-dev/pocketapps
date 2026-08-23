@@ -22,7 +22,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   final _usernameCtrl = TextEditingController();
   int _page = 0;
 
-  static const _totalPages = 6;
+  // Demo mostra apenas os slides informativos (sem definicoes nem wizard).
+  int get _totalPages => widget.demoMode ? 4 : 6;
   bool _finishing = false;
 
   String _currency = 'EUR';
@@ -66,13 +67,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     // flags ou wizard.
     if (widget.demoMode) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Fim da demonstração — nenhuma alteração foi guardada.',
-          ),
-        ),
-      );
       Navigator.of(context).pop();
       return;
     }
@@ -134,38 +128,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 padding: const EdgeInsets.only(top: 8, right: 16),
                 child: TextButton(
                   onPressed: _finishing ? null : () => _finish(),
-                  child: Text(widget.demoMode ? 'Sair' : 'Saltar'),
+                  child: const Text('Saltar'),
                 ),
               ),
             ),
-            if (widget.demoMode)
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.school_outlined,
-                        size: 18, color: Colors.amber.shade900),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Modo demonstração — nenhuma alteração será guardada.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.amber.shade900,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             Expanded(
               child: PageView(
                 controller: _pageCtrl,
@@ -176,19 +142,21 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   _SlideRecurring(colorScheme: colorScheme),
                   _SlideSummary(colorScheme: colorScheme),
                   _SlidePreview(colorScheme: colorScheme),
-                  _SetupPage(
-                    usernameController: _usernameCtrl,
-                    readOnly: widget.demoMode,
-                    currency: _currency,
-                    onCurrencyChanged: (c) => setState(() => _currency = c),
-                    themeMode: _themeMode,
-                    onThemeModeChanged: (m) => setState(() => _themeMode = m),
-                    colorScheme: colorScheme,
-                  ),
-                  _WizardOfferPage(
-                    onUseWizard: () => _finish(useWizard: true),
-                    onExploreAlone: () => _finish(),
-                  ),
+                  if (!widget.demoMode) ...[
+                    _SetupPage(
+                      usernameController: _usernameCtrl,
+                      currency: _currency,
+                      onCurrencyChanged: (c) =>
+                          setState(() => _currency = c),
+                      themeMode: _themeMode,
+                      onThemeModeChanged: (m) => setState(() => _themeMode = m),
+                      colorScheme: colorScheme,
+                    ),
+                    _WizardOfferPage(
+                      onUseWizard: () => _finish(useWizard: true),
+                      onExploreAlone: () => _finish(),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -221,6 +189,12 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       label: Text(
                         _page >= _totalPages - 2 ? 'Continuar' : 'Seguinte',
                       ),
+                    )
+                  else if (widget.demoMode)
+                    FilledButton.icon(
+                      onPressed: () => _finish(),
+                      icon: const Icon(Icons.check),
+                      label: const Text('Terminar'),
                     ),
                 ],
               ),
@@ -332,7 +306,6 @@ class _SlideShell extends StatelessWidget {
 
 class _SetupPage extends StatelessWidget {
   final TextEditingController usernameController;
-  final bool readOnly;
   final String currency;
   final ValueChanged<String> onCurrencyChanged;
   final ThemeMode themeMode;
@@ -341,7 +314,6 @@ class _SetupPage extends StatelessWidget {
 
   const _SetupPage({
     required this.usernameController,
-    required this.readOnly,
     required this.currency,
     required this.onCurrencyChanged,
     required this.themeMode,
@@ -380,7 +352,6 @@ class _SetupPage extends StatelessWidget {
           const SizedBox(height: 10),
           TextField(
             controller: usernameController,
-            readOnly: readOnly,
             decoration: const InputDecoration(
               prefixIcon: Icon(Icons.badge_outlined),
               hintText: 'ex.: paulo_silva',

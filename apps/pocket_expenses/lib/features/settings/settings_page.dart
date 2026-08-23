@@ -256,12 +256,18 @@ class SettingsPage extends ConsumerWidget {
                   leading: const Icon(Icons.replay_outlined),
                   title: const Text('Simular 1.ª utilização'),
                   subtitle: const Text(
-                    'Teste: corre o tutorial completo como no primeiro arranque',
+                    'Teste: tutorial completo com direito a 1 despesa no wizard',
                   ),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
+                  onTap: () async {
+                    await ref
+                        .read(profileActionsProvider)
+                        .resetWizardFreeUsed();
+                    if (!context.mounted) return;
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const OnboardingPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const OnboardingPage(),
+                      ),
                     );
                   },
                 ),

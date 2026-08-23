@@ -73,4 +73,11 @@ class ProfileActions {
     await _service.updateFlags({'wizard_free_used': true});
     _ref.invalidate(profileFlagsProvider);
   }
+
+  /// Usado apenas pelo botao "Simular 1.a utilizacao": repoe o uso gratuito
+  /// do wizard para reproduzir o estado de um utilizador novo.
+  Future<void> resetWizardFreeUsed() async {
+    await _service.updateFlags({'wizard_free_used': false});
+    _ref.invalidate(profileFlagsProvider);
+  }
 }
