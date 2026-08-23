@@ -208,6 +208,25 @@ class _ExpenseWizardPageState extends ConsumerState<ExpenseWizardPage> {
 
     if (!mounted) return;
     if (action == 'another') {
+      // Bloqueio antecipado: antes de deixar o utilizador preencher outra
+      // despesa, exige Premium se o uso gratuito do wizard ja foi consumido.
+      if (!(sub?.isActive ?? false)) {
+        final used =
+            (await ref.read(profileFlagsProvider.future)).wizardFreeUsed;
+        if (used) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content:
+                  Text('O Wizard passo a passo e uma funcionalidade Premium.'),
+            ),
+          );
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const PlansPage()),
+          );
+          return;
+        }
+      }
       setState(() {
         _step = 0;
         _nameCtrl.clear();
