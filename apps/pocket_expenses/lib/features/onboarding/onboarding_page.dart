@@ -16,17 +16,33 @@ class OnboardingPage extends ConsumerStatefulWidget {
 
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   final _pageCtrl = PageController();
+  final _usernameCtrl = TextEditingController();
   int _page = 0;
 
-  static const _totalPages = 5;
+  static const _totalPages = 6;
   bool _finishing = false;
 
   String _currency = 'EUR';
   ThemeMode _themeMode = ThemeMode.light;
+  String? _originalUsername;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(profileProvider.future).then((profile) {
+      if (!mounted) return;
+      final current = profile?['username']?.toString() ?? '';
+      setState(() {
+        _usernameCtrl.text = current;
+        _originalUsername = current;
+      });
+    });
+  }
 
   @override
   void dispose() {
     _pageCtrl.dispose();
+    _usernameCtrl.dispose();
     super.dispose();
   }
 
@@ -42,6 +58,32 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   Future<void> _finish({bool useWizard = false}) async {
     if (_finishing) return;
     _finishing = true;
+
+    final username = _usernameCtrl.text.trim();
+    if (username.isEmpty) {
+      setState(() => _finishing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('O nome de utilizador não pode estar vazio'),
+        ),
+      );
+      return;
+    }
+    if (username != _originalUsername) {
+      final ok =
+          await ref.read(profileActionsProvider).updateUsername(username);
+      if (!ok) {
+        setState(() => _finishing = false);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nome de utilizador já está em uso'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
 
     await ref.read(currencyProvider.notifier).setCurrency(_currency);
     await ref.read(themeModeProvider.notifier).setMode(_themeMode);
@@ -87,7 +129,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   _SlideWelcome(colorScheme: colorScheme),
                   _SlideRecurring(colorScheme: colorScheme),
                   _SlideSummary(colorScheme: colorScheme),
+                  _SlidePreview(colorScheme: colorScheme),
                   _SetupPage(
+                    usernameController: _usernameCtrl,
                     currency: _currency,
                     onCurrencyChanged: (c) => setState(() => _currency = c),
                     themeMode: _themeMode,
@@ -240,6 +284,7 @@ class _SlideShell extends StatelessWidget {
 }
 
 class _SetupPage extends StatelessWidget {
+  final TextEditingController usernameController;
   final String currency;
   final ValueChanged<String> onCurrencyChanged;
   final ThemeMode themeMode;
@@ -247,6 +292,7 @@ class _SetupPage extends StatelessWidget {
   final ColorScheme colorScheme;
 
   const _SetupPage({
+    required this.usernameController,
     required this.currency,
     required this.onCurrencyChanged,
     required this.themeMode,
@@ -273,7 +319,25 @@ class _SetupPage extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
+          Text(
+            'Nome de utilizador',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: usernameController,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.badge_outlined),
+              hintText: 'ex.: paulo_silva',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 28),
           Text(
             'Moeda',
             style: TextStyle(
@@ -381,6 +445,169 @@ class _WizardOfferPage extends StatelessWidget {
           OutlinedButton(
             onPressed: onExploreAlone,
             child: const Text('Explorar sozinho'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SlidePreview extends StatelessWidget {
+  final ColorScheme colorScheme;
+
+  const _SlidePreview({required this.colorScheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'A tua pagina principal',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Um exemplo do que vais encontrar dentro da app.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxWidth: 360),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      'Agosto 2026',
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '1.234,56 € / mes',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: 0.62,
+                    minHeight: 8,
+                    backgroundColor:
+                        colorScheme.primary.withValues(alpha: 0.12),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _MockTile(
+                  icon: Icons.event_repeat,
+                  color: colorScheme.secondary,
+                  name: 'Renda',
+                  sub: 'Fixa · dia 5',
+                  amount: '750,00 €',
+                ),
+                _MockTile(
+                  icon: Icons.subscriptions_outlined,
+                  color: colorScheme.tertiary,
+                  name: 'Netflix',
+                  sub: 'Fixa · dia 12',
+                  amount: '17,99 €',
+                ),
+                _MockTile(
+                  icon: Icons.shopping_bag_outlined,
+                  color: colorScheme.primary,
+                  name: 'Compras mercado',
+                  sub: 'Variavel',
+                  amount: '213,40 €',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MockTile extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String name;
+  final String sub;
+  final String amount;
+
+  const _MockTile({
+    required this.icon,
+    required this.color,
+    required this.name,
+    required this.sub,
+    required this.amount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  sub,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            amount,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
           ),
         ],
       ),
