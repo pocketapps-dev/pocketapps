@@ -7,6 +7,8 @@ import '../../core/models/category.dart';
 import '../../core/models/expense.dart';
 import '../../core/providers/category_provider.dart';
 import '../../core/providers/expense_provider.dart';
+import '../../core/providers/profile_provider.dart';
+import '../../core/providers/subscription_provider.dart';
 import '../home/home_page.dart';
 
 class ExpenseWizardPage extends ConsumerStatefulWidget {
@@ -151,6 +153,13 @@ class _ExpenseWizardPageState extends ConsumerState<ExpenseWizardPage> {
 
     ref.invalidate(expensesProvider(true));
 
+    final sub = await ref.read(subscriptionProvider.future);
+    if (!(sub?.isActive ?? false)) {
+      try {
+        await ref.read(profileActionsProvider).markWizardFreeUsed();
+      } catch (_) {}
+    }
+
     if (!mounted) return;
     final action = await showDialog<String>(
       context: context,
@@ -277,6 +286,11 @@ class _ExpenseWizardPageState extends ConsumerState<ExpenseWizardPage> {
   @override
   Widget build(BuildContext context) {
     final steps = _buildSteps();
+    final isPremium =
+        (ref.watch(subscriptionProvider).value?.isActive ?? false);
+    final wizardUsed =
+        (ref.watch(profileFlagsProvider).value?.wizardFreeUsed ?? false);
+    final showFreeBanner = !isPremium && !wizardUsed;
 
     return Scaffold(
       appBar: AppBar(
@@ -287,6 +301,33 @@ class _ExpenseWizardPageState extends ConsumerState<ExpenseWizardPage> {
       ),
       body: Column(
         children: [
+          if (showFreeBanner)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.auto_awesome,
+                      size: 18, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Uso gratuito: depois de guardares, o Wizard passa a ser exclusivo do Premium.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.green.shade800,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
             child: Row(

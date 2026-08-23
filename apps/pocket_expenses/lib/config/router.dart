@@ -4,7 +4,9 @@ import 'package:pocketapps_auth/pocketapps_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/providers/category_provider.dart';
+import '../core/providers/profile_provider.dart';
 import '../features/home/home_page.dart';
+import '../features/onboarding/onboarding_page.dart';
 import '../features/profile/edit_profile_page.dart';
 import '../features/profile/currency_settings_page.dart';
 import '../features/settings/about_page.dart';
@@ -19,6 +21,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (authState.event == AuthChangeEvent.passwordRecovery) {
         ref.read(isRecoveryFlowProvider.notifier).trigger();
       }
+      if (authState.event == AuthChangeEvent.signedIn ||
+          authState.event == AuthChangeEvent.signedOut ||
+          authState.event == AuthChangeEvent.initialSession) {
+        ref.invalidate(profileFlagsProvider);
+      }
     });
   });
 
@@ -28,7 +35,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/',
-    redirect: (context, state) {
+    redirect: (context, state) async {
       final session = PocketAuth.client.auth.currentSession;
       final isLoggedIn = session != null;
       final location = state.matchedLocation;
@@ -49,10 +56,25 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (!isLoggedIn && !isPublicRoute) return '/auth';
       if (isLoggedIn && location == '/auth') return '/';
+
+      if (isLoggedIn && !isPublicRoute) {
+        try {
+          final flags = await ref.read(profileFlagsProvider.future);
+          if (!flags.onboardingCompleted) {
+            return location == '/onboarding' ? null : '/onboarding';
+          }
+          if (location == '/onboarding') return '/';
+        } catch (_) {}
+      }
+
       return null;
     },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const HomePage()),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingPage(),
+      ),
       GoRoute(
         path: '/auth',
         builder: (context, state) => AuthPage(onNewUser: seedNewUser),

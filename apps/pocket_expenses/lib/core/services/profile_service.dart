@@ -23,6 +23,10 @@ class ProfileService {
         .eq('id', _userId);
   }
 
+  Future<void> updateFlags(Map<String, dynamic> flags) async {
+    await _client.from('profiles').update(flags).eq('id', _userId);
+  }
+
   Future<bool> checkUsernameAvailable(String username) async {
     final result = await _client.rpc(
       'check_username_available',

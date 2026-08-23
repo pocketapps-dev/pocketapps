@@ -8,6 +8,9 @@ import '../../core/models/expense.dart';
 import '../../core/models/monthly_status.dart';
 import '../../core/providers/category_provider.dart';
 import '../../core/providers/expense_provider.dart';
+import '../../core/providers/profile_provider.dart';
+import '../../core/providers/subscription_provider.dart';
+import '../settings/plans_page.dart';
 import 'expense_form_page.dart';
 import 'expense_wizard_page.dart';
 
@@ -109,6 +112,11 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
   }
 
   void _showAddOptions(BuildContext context) {
+    final isPremium = (ref.read(subscriptionProvider).value?.isActive ?? false);
+    final wizardUsed = (ref.read(profileFlagsProvider).value?.wizardFreeUsed ?? false);
+    final wizardLocked = !isPremium && wizardUsed;
+    final wizardFreeAvailable = !isPremium && !wizardUsed;
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -131,22 +139,92 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               const SizedBox(height: 16),
               ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.primaryContainer,
+                  backgroundColor: wizardLocked
+                      ? Colors.grey.shade300
+                      : Theme.of(context).colorScheme.primaryContainer,
                   child: Icon(
-                    Icons.auto_awesome,
-                    color: Theme.of(context).colorScheme.primary,
+                    wizardLocked ? Icons.lock : Icons.auto_awesome,
+                    color: wizardLocked
+                        ? Colors.grey.shade600
+                        : Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                title: const Text('Wizard passo a passo'),
-                subtitle: const Text('Criar despesa guiada'),
-                onTap: () {
+                title: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Wizard passo a passo'),
+                    if (wizardFreeAvailable) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text(
+                          'Gratis',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (wizardLocked) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Premium',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                subtitle: Text(
+                  wizardLocked
+                      ? 'Disponivel no plano Premium'
+                      : wizardFreeAvailable
+                          ? 'Experimenta gratis, resta 1 uso'
+                          : 'Criar despesa guiada',
+                ),
+                onTap: () async {
                   Navigator.pop(ctx);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ExpenseWizardPage(),
+                  if (!wizardLocked) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ExpenseWizardPage(),
+                      ),
+                    );
+                    return;
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'O Wizard passo a passo e uma funcionalidade Premium.',
+                      ),
                     ),
+                  );
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PlansPage()),
                   );
                 },
               ),
