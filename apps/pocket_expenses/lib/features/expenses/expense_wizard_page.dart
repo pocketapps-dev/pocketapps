@@ -10,6 +10,7 @@ import '../../core/providers/expense_provider.dart';
 import '../../core/providers/profile_provider.dart';
 import '../../core/providers/subscription_provider.dart';
 import '../home/home_page.dart';
+import '../settings/plans_page.dart';
 
 class ExpenseWizardPage extends ConsumerStatefulWidget {
   const ExpenseWizardPage({super.key});
@@ -118,6 +119,28 @@ class _ExpenseWizardPageState extends ConsumerState<ExpenseWizardPage> {
   Future<void> _save() async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
+
+    final isPremium =
+        (ref.read(subscriptionProvider).value?.isActive ?? false);
+    if (!isPremium) {
+      // Guarda duro: mesmo que o ecra anterior tenha deixado passar, confirma
+      // o valor fresco das flags antes de criar a despesa.
+      final used =
+          (await ref.read(profileFlagsProvider.future)).wizardFreeUsed;
+      if (used) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('O Wizard passo a passo e uma funcionalidade Premium.'),
+          ),
+        );
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PlansPage()),
+        );
+        return;
+      }
+    }
 
     final amount = double.parse(_amountCtrl.text.replaceAll(',', '.'));
     final installments = int.tryParse(_installmentsCtrl.text);

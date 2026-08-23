@@ -105,15 +105,19 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddOptions(context),
+        onPressed: () => _showAddOptions(),
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  void _showAddOptions(BuildContext context) {
+  Future<void> _showAddOptions() async {
     final isPremium = (ref.read(subscriptionProvider).value?.isActive ?? false);
-    final wizardUsed = (ref.read(profileFlagsProvider).value?.wizardFreeUsed ?? false);
+    // Aguarda o valor fresco das flags: ler .value diretamente pode devolver
+    // null se o provider foi invalidado (ex.: apos usar o wizard gratis).
+    final wizardUsed =
+        (await ref.read(profileFlagsProvider.future)).wizardFreeUsed;
+    if (!mounted) return;
     final wizardLocked = !isPremium && wizardUsed;
     final wizardFreeAvailable = !isPremium && !wizardUsed;
 
